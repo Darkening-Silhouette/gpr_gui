@@ -1,0 +1,14 @@
+*.DT1 filter=lfs diff=lfs merge=lfs -text
+*.proj filter=lfs diff=lfs merge=lfs -text
+*.gps filter=lfs diff=lfs merge=lfs -text
+*.rd7 filter=lfs diff=lfs merge=lfs -text
+*.hd filter=lfs diff=lfs merge=lfs -text
+*.cor filter=lfs diff=lfs merge=lfs -text
+*.tts filter=lfs diff=lfs merge=lfs -text
+*.coa filter=lfs diff=lfs merge=lfs -text
+*.mrkj filter=lfs diff=lfs merge=lfs -text
+*.rad filter=lfs diff=lfs merge=lfs -text
+*.HD filter=lfs diff=lfs merge=lfs -text
+*.dt1 filter=lfs diff=lfs merge=lfs -text
+*.csv filter=lfs diff=lfs merge=lfs -text
+*.cob filter=lfs diff=lfs merge=lfs -text
