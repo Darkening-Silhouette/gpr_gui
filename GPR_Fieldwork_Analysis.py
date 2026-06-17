@@ -353,7 +353,15 @@ class PulseEkko3DAnalysis(QWidget):
         self.tabs.currentChanged.connect(lambda *_: self.update_selected())
 
     def selected_canvas(self):
-        return self.tabs.tabText(self.tabs.currentIndex()), self.canvases[self.tabs.tabText(self.tabs.currentIndex())]
+        name = self.tabs.tabText(self.tabs.currentIndex())
+        canvas = self.canvases.get(name)
+        if canvas is None and name == "Time Lapse Map":
+            canvas = self.canvases.get("Depth Slice Map") or self.canvases.get("Time Slice Map") or self.canvases.get("Amplitude Projection")
+            if canvas is not None:
+                self.canvases[name] = canvas
+        if canvas is None:
+            raise KeyError(name)
+        return name, canvas
 
     def get_array(self, line):
         if self.data_choice.currentText() == "raw":
@@ -555,10 +563,10 @@ class PulseEkkoProjectTab(QWidget):
         self.sec_power = QDoubleSpinBox(); self.sec_power.setRange(0, 10); self.sec_power.setSingleStep(0.05); self.sec_power.setValue(0.0)
         self.display_clip = QDoubleSpinBox(); self.display_clip.setRange(80, 100); self.display_clip.setDecimals(2); self.display_clip.setValue(99.50); self.display_clip.setSuffix(" %")
         self.bg_remove = QCheckBox("Local median background removal"); self.bg_remove.setChecked(False)
-        self.bandpass = QCheckBox("Bandpass"); self.bandpass.setChecked(True)
-        self.convention = QCheckBox("Display convention: line start → line end"); self.convention.setChecked(True); self.convention.setEnabled(False)
+        self.bandpass = QCheckBox("Bandpass"); self.bandpass.setChecked(False)
+        self.convention = QCheckBox("Display convention: line start → line end"); self.convention.setChecked(False); self.convention.setEnabled(False)
         self.t0_auto = QCheckBox("Auto time-zero")
-        self.t0_auto.setChecked(True)
+        self.t0_auto.setChecked(False)
         self.t0_search_min = QDoubleSpinBox(); self.t0_search_min.setRange(0, 1000); self.t0_search_min.setValue(5.0); self.t0_search_min.setSuffix(" ns")
         self.t0_search_max = QDoubleSpinBox(); self.t0_search_max.setRange(0, 1000); self.t0_search_max.setValue(15.0); self.t0_search_max.setSuffix(" ns")
         self.t0_target = QDoubleSpinBox(); self.t0_target.setRange(-100, 100); self.t0_target.setValue(0.0); self.t0_target.setSuffix(" ns")
@@ -1713,3 +1721,557 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# ---- HARD OVERRIDE: replace Bulach depth slice with time-lapse GIF map ----
+def _pe_assets_dir():
+    d = Path(__file__).resolve().parent / "Assets"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _pe_hide_depth_controls(self):
+    """Hide arbitrary depth/depth-velocity controls after the original UI is built."""
+    try:
+        for attr in ("depth", "velocity"):
+            w = getattr(self, attr, None)
+            if w is not None:
+                w.hide()
+                w.setVisible(False)
+        for lab in self.findChildren(QLabel):
+            if lab.text().strip().lower() in {"depth", "velocity"}:
+                lab.hide()
+                lab.setVisible(False)
+        for i in range(self.tabs.count()):
+            if self.tabs.tabText(i).strip().lower() == "depth slice map":
+                self.tabs.setTabText(i, "Time Lapse Map")
+    except Exception:
+        pass
+
+
+def _pe_plot_time_lapse_frame(self, ax, time_ns, title_prefix="Bulach time-lapse map"):
+    old_time = None
+    try:
+        old_time = float(self.time_slice.value())
+        self.time_slice.setValue(float(time_ns))
+    except Exception:
+        pass
+    try:
+        x, y, v = self.collect_values("time")
+    finally:
+        try:
+            if old_time is not None:
+                self.time_slice.setValue(old_time)
+        except Exception:
+            pass
+    ax.clear()
+    if len(v) == 0:
+        ax.text(0.5, 0.5, f"No data at {time_ns:.1f} ns", transform=ax.transAxes, ha="center", va="center")
+        return None
+    finite = v[np.isfinite(v)]
+    if finite.size == 0:
+        ax.text(0.5, 0.5, f"No finite data at {time_ns:.1f} ns", transform=ax.transAxes, ha="center", va="center")
+        return None
+    vmax = float(np.nanpercentile(np.abs(finite), 98.0))
+    if not np.isfinite(vmax) or vmax <= 0:
+        vmax = 1.0
+    im = None
+    try:
+        if SCIPY_OK and len(v) > 100:
+            gx = np.linspace(float(np.nanmin(x)), float(np.nanmax(x)), 280)
+            gy = np.linspace(float(np.nanmin(y)), float(np.nanmax(y)), 280)
+            X, Y = np.meshgrid(gx, gy)
+            Z = griddata((x, y), v, (X, Y), method="linear")
+            im = ax.imshow(
+                Z,
+                extent=[gx.min(), gx.max(), gy.min(), gy.max()],
+                origin="lower",
+                aspect="equal",
+                cmap="inferno",
+                vmin=0.0,
+                vmax=vmax,
+            )
+        else:
+            im = ax.scatter(x, y, c=v, s=4, cmap="inferno", vmin=0.0, vmax=vmax)
+    except Exception:
+        im = ax.scatter(x, y, c=v, s=4, cmap="inferno", vmin=0.0, vmax=vmax)
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_title(f"{title_prefix}: {time_ns:.1f} ns")
+    ax.set_xlabel("Local easting [m]")
+    ax.set_ylabel("Local northing [m]")
+    ax.grid(True, alpha=0.2)
+    try:
+        if im is not None:
+            for _ax in list(ax.figure.axes):
+                if getattr(_ax, "_tl_cbar_ax", False):
+                    _ax.remove()
+            _tl_cbar = ax.figure.colorbar(im, ax=ax, fraction=0.035, pad=0.02)
+            _tl_cbar.ax._tl_cbar_ax = True
+            _tl_cbar.set_label("Relative amplitude", fontsize=8)
+            _tl_cbar.ax.tick_params(labelsize=7)
+            try:
+                ax.figure.set_size_inches(8.0, 6.0, forward=True)
+                ax.set_position([0.08, 0.15, 0.73, 0.74])
+                _tl_cbar.ax.set_position([0.85, 0.15, 0.025, 0.74])
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return im
+
+
+def _pe_plot_time_lapse_map(self):
+    from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QApplication
+    from PyQt6.QtCore import Qt
+    from matplotlib.figure import Figure
+    from matplotlib.animation import FuncAnimation, PillowWriter
+
+    tmax = float(self.proj_tmax.value())
+    if not np.isfinite(tmax) or tmax <= 0:
+        tmax = 50.0
+    nframes = int(np.clip(round(tmax / 2.5) + 1, 12, 80))
+    frames = np.linspace(0.0, tmax, nframes)
+
+    assets = _pe_assets_dir()
+    out = assets / f"Bulach_time_lapse_0_to_{tmax:.0f}ns.gif"
+
+    dlg = QProgressDialog("Building Bulach time-lapse GIF...", "Cancel", 0, nframes + 2, self)
+    dlg.setWindowTitle("Bulach time-lapse map")
+    dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+    dlg.setMinimumDuration(0)
+    dlg.setAutoClose(False)
+    dlg.setAutoReset(False)
+    dlg.show()
+    QApplication.processEvents()
+
+    fig = Figure(figsize=(8, 6), dpi=120, constrained_layout=True)
+    ax = fig.add_subplot(111)
+
+    def update(i):
+        if dlg.wasCanceled():
+            raise RuntimeError("Cancelled by user.")
+        tns = float(frames[i])
+        dlg.setLabelText(f"Rendering frame {i + 1}/{nframes}: {tns:.1f} ns")
+        dlg.setValue(i)
+        QApplication.processEvents()
+        _pe_plot_time_lapse_frame(self, ax, tns)
+        return []
+
+    try:
+        anim = FuncAnimation(fig, update, frames=len(frames), interval=250, blit=False, repeat=True)
+        anim.save(out, writer=PillowWriter(fps=4))
+        dlg.setValue(nframes + 1)
+        dlg.setLabelText("Updating GUI preview...")
+        QApplication.processEvents()
+        name, canvas = self.selected_canvas()
+        canvas.fig.clear()
+        ax2 = canvas.fig.add_subplot(111)
+        canvas.ax = ax2
+        _pe_plot_time_lapse_frame(self, ax2, float(frames[-1]), "Bulach time-lapse preview")
+        canvas.draw()
+        self.owner.status.setText(f"Saved Bulach time-lapse GIF: {out}")
+        QMessageBox.information(self, "Time-lapse GIF saved", f"Saved:\n{out}")
+    except Exception as e:
+        self.owner.status.setText(f"Time-lapse GIF failed: {e}")
+        QMessageBox.critical(self, "Time-lapse GIF failed", str(e))
+    finally:
+        dlg.close()
+
+
+try:
+    _PE_ORIG_INIT_TIME_LAPSE = PulseEkko3DAnalysis.__init__
+    def _pe_init_time_lapse(self, *args, **kwargs):
+        _PE_ORIG_INIT_TIME_LAPSE(self, *args, **kwargs)
+        _pe_hide_depth_controls(self)
+    PulseEkko3DAnalysis.__init__ = _pe_init_time_lapse
+
+    PulseEkko3DAnalysis.plot_time_lapse_map = _pe_plot_time_lapse_map
+
+    _PE_ORIG_UPDATE_SELECTED_TIME_LAPSE = PulseEkko3DAnalysis.update_selected
+    def _pe_update_selected_time_lapse(self):
+        name, canvas = self.selected_canvas()
+        if name.strip().lower() == "time lapse map":
+            return self.plot_time_lapse_map()
+        return _PE_ORIG_UPDATE_SELECTED_TIME_LAPSE(self)
+    PulseEkko3DAnalysis.update_selected = _pe_update_selected_time_lapse
+except Exception as _e:
+    print("Bulach time-lapse override not applied:", _e)
+# ---- END HARD OVERRIDE: Bulach time-lapse GIF map ----
+
+# ---- HARD OVERRIDE V2: Bulach animated time-lapse controls ----
+def _pe_tl_fmt_num(x):
+    try:
+        s = ("%.2f" % float(x)).rstrip("0").rstrip(".")
+    except Exception:
+        s = str(x)
+    return s.replace(".", "p")
+
+
+def _pe_tl_speed_value(self):
+    try:
+        return float(self.tl_speed.currentText().replace("x", ""))
+    except Exception:
+        return 1.0
+
+
+def _pe_tl_step_value(self):
+    try:
+        v = float(self.tl_step_ns.value())
+        return v if v > 0 else 5.0
+    except Exception:
+        return 5.0
+
+
+def _pe_tl_frames(self):
+    import numpy as _np
+    try:
+        tmax = float(self.proj_tmax.value())
+    except Exception:
+        tmax = 50.0
+    if not _np.isfinite(tmax) or tmax <= 0:
+        tmax = 50.0
+    step = _pe_tl_step_value(self)
+    frames = list(_np.arange(0.0, tmax + 0.5 * step, step, dtype=float))
+    if not frames or frames[-1] < tmax:
+        frames.append(float(tmax))
+    return frames, float(tmax), float(step)
+
+
+def _pe_tl_draw_progress_axis(pax, idx, n, time_ns, loop_no=0):
+    from matplotlib.patches import Rectangle
+    pax.clear()
+    pax.set_xlim(0, 1)
+    pax.set_ylim(0, 1)
+    pax.axis("off")
+    frac = 1.0 if n <= 1 else float(idx) / float(n - 1)
+    pax.add_patch(Rectangle((0.02, 0.28), 0.96, 0.44, fill=False, linewidth=1.0))
+    pax.add_patch(Rectangle((0.02, 0.28), 0.96 * frac, 0.44, alpha=0.65))
+    pax.text(0.5, 0.5, f"{time_ns:.1f} ns | frame {idx + 1}/{n} | loop {loop_no + 1}", ha="center", va="center", fontsize=9)
+
+
+def _pe_tl_current_canvas(self):
+    try:
+        return self.selected_canvas()[1]
+    except Exception:
+        return getattr(self, "depth_canvas", None)
+
+
+def _pe_tl_draw_canvas_frame(self, time_ns, idx, n, loop_no=0):
+    c = _pe_tl_current_canvas(self)
+    if c is None:
+        return
+    c.fig.clear()
+    gs = c.fig.add_gridspec(2, 1, height_ratios=[20, 1], hspace=0.28)
+    ax = c.fig.add_subplot(gs[0, 0])
+    pax = c.fig.add_subplot(gs[1, 0])
+    _pe_plot_time_lapse_frame(self, ax, float(time_ns), "Bulach time-lapse map")
+    _pe_tl_draw_progress_axis(pax, int(idx), int(n), float(time_ns), int(loop_no))
+    c.draw_idle()
+
+
+def _pe_tl_tick(self):
+    frames = getattr(self, "_tl_frames", [])
+    if not frames:
+        return
+    n = len(frames)
+    idx = int(getattr(self, "_tl_idx", 0))
+    loop_no = int(getattr(self, "_tl_loop", 0))
+    if idx >= n:
+        idx = 0
+        loop_no += 1
+        self._tl_loop = loop_no
+    _pe_tl_draw_canvas_frame(self, frames[idx], idx, n, loop_no)
+    try:
+        self.tl_progress.setRange(0, max(0, n - 1))
+        self.tl_progress.setValue(idx)
+        self.tl_progress.setFormat(f"{frames[idx]:.1f} ns  |  frame {idx + 1}/{n}  |  loop {loop_no + 1}")
+    except Exception:
+        pass
+    self._tl_idx = idx + 1
+
+
+def _pe_tl_start_preview(self, frames):
+    from PyQt6.QtCore import QTimer
+    try:
+        if getattr(self, "_tl_timer", None) is not None:
+            self._tl_timer.stop()
+    except Exception:
+        pass
+    self._tl_frames = [float(x) for x in frames]
+    self._tl_idx = 0
+    self._tl_loop = 0
+    timer = QTimer(self)
+    timer.timeout.connect(lambda: _pe_tl_tick(self))
+    self._tl_timer = timer
+    _pe_tl_tick(self)
+    interval_ms = max(40, int(round(250.0 / _pe_tl_speed_value(self))))
+    timer.start(interval_ms)
+
+
+def _pe_tl_open_latest(self):
+    from pathlib import Path as _Path
+    from PyQt6.QtCore import QUrl
+    from PyQt6.QtGui import QDesktopServices
+    from PyQt6.QtWidgets import QMessageBox
+    p = _Path(str(getattr(self, "_tl_last_gif", "")))
+    if p.exists():
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(p)))
+    else:
+        QMessageBox.information(self, "No GIF yet", "Generate the Time Lapse Map first.")
+
+
+def _pe_tl_save_as(self):
+    import shutil
+    from pathlib import Path as _Path
+    from PyQt6.QtWidgets import QFileDialog, QMessageBox
+    p = _Path(str(getattr(self, "_tl_last_gif", "")))
+    if not p.exists():
+        QMessageBox.information(self, "No GIF yet", "Generate the Time Lapse Map first.")
+        return
+    out, _ = QFileDialog.getSaveFileName(self, "Save time-lapse GIF as", str(p), "GIF files (*.gif)")
+    if out:
+        if not out.lower().endswith(".gif"):
+            out += ".gif"
+        shutil.copyfile(p, out)
+        QMessageBox.information(self, "GIF copied", f"Saved copy:\n{out}")
+
+
+def _pe_tl_add_controls(self):
+    try:
+        if getattr(self, "_tl_controls_added_v2", False):
+            return
+        from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QComboBox, QDoubleSpinBox, QProgressBar
+        row = QWidget(self)
+        box = QHBoxLayout(row)
+        box.setContentsMargins(4, 2, 4, 2)
+        box.addWidget(QLabel("Time-lapse step"))
+        self.tl_step_ns = QDoubleSpinBox(row)
+        self.tl_step_ns.setRange(0.5, 50.0)
+        self.tl_step_ns.setDecimals(1)
+        self.tl_step_ns.setSingleStep(0.5)
+        self.tl_step_ns.setSuffix(" ns")
+        self.tl_step_ns.setValue(5.0)
+        box.addWidget(self.tl_step_ns)
+        box.addWidget(QLabel("Playback"))
+        self.tl_speed = QComboBox(row)
+        self.tl_speed.addItems(["0.5x", "1.0x", "1.5x"])
+        self.tl_speed.setCurrentText("1.0x")
+        box.addWidget(self.tl_speed)
+        self.tl_open_btn = QPushButton("Open GIF", row)
+        self.tl_saveas_btn = QPushButton("Save GIF As", row)
+        box.addWidget(self.tl_open_btn)
+        box.addWidget(self.tl_saveas_btn)
+        box.addStretch(1)
+        self.tl_progress = QProgressBar(self)
+        self.tl_progress.setTextVisible(True)
+        self.tl_progress.setFormat("Time-lapse not generated")
+        self.tl_open_btn.clicked.connect(lambda: _pe_tl_open_latest(self))
+        self.tl_saveas_btn.clicked.connect(lambda: _pe_tl_save_as(self))
+        lay = self.layout()
+        if lay is not None:
+            lay.insertWidget(1, row)
+            lay.addWidget(self.tl_progress)
+        self._tl_controls_added_v2 = True
+    except Exception as e:
+        print("Bulach time-lapse controls not added:", e)
+
+
+def _pe_plot_time_lapse_map_v2(self):
+    from pathlib import Path as _Path
+    from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QApplication
+    from PyQt6.QtCore import Qt
+    from matplotlib.figure import Figure
+    from matplotlib.animation import FuncAnimation, PillowWriter
+
+    frames, tmax, step = _pe_tl_frames(self)
+    speed = _pe_tl_speed_value(self)
+    n = len(frames)
+    assets = _Path(__file__).resolve().parent / "Assets"
+    assets.mkdir(parents=True, exist_ok=True)
+    out = assets / f"Bulach_time_lapse_0_to_{_pe_tl_fmt_num(tmax)}ns_step_{_pe_tl_fmt_num(step)}ns_speed_{_pe_tl_fmt_num(speed)}x.gif"
+
+    dlg = QProgressDialog("Building Bulach time-lapse GIF...", "Cancel", 0, n, self)
+    dlg.setWindowTitle("Bulach time-lapse map")
+    dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+    dlg.setMinimumDuration(0)
+    dlg.setAutoClose(False)
+    dlg.setAutoReset(False)
+    dlg.show()
+    QApplication.processEvents()
+
+    fig = Figure(figsize=(8, 6), dpi=120, constrained_layout=True)
+    gs = fig.add_gridspec(2, 1, height_ratios=[20, 1], hspace=0.28)
+    ax = fig.add_subplot(gs[0, 0])
+    pax = fig.add_subplot(gs[1, 0])
+
+    def update(i):
+        if dlg.wasCanceled():
+            raise RuntimeError("Cancelled by user.")
+        tns = float(frames[i])
+        dlg.setLabelText(f"Rendering frame {i + 1}/{n}: {tns:.1f} ns")
+        dlg.setValue(i)
+        QApplication.processEvents()
+        _pe_plot_time_lapse_frame(self, ax, tns, "Bulach time-lapse map")
+        _pe_tl_draw_progress_axis(pax, i, n, tns, 0)
+        return []
+
+    try:
+        anim = FuncAnimation(fig, update, frames=n, interval=max(40, int(round(250.0 / speed))), blit=False, repeat=True)
+        anim.save(out, writer=PillowWriter(fps=max(1, int(round(4.0 * speed)))))
+        dlg.setValue(n)
+        self._tl_last_gif = str(out)
+        _pe_tl_start_preview(self, frames)
+        self.owner.status.setText(f"Saved Bulach time-lapse GIF: {out}")
+        QMessageBox.information(self, "Time-lapse GIF saved", f"Saved:\n{out}")
+    except Exception as e:
+        self.owner.status.setText(f"Time-lapse GIF failed: {e}")
+        QMessageBox.critical(self, "Time-lapse GIF failed", str(e))
+    finally:
+        dlg.close()
+
+
+try:
+    _PE_TL_V2_PREV_INIT = PulseEkko3DAnalysis.__init__
+    def _pe_tl_v2_init(self, *args, **kwargs):
+        _PE_TL_V2_PREV_INIT(self, *args, **kwargs)
+        try:
+            _pe_hide_depth_controls(self)
+        except Exception:
+            pass
+        _pe_tl_add_controls(self)
+    PulseEkko3DAnalysis.__init__ = _pe_tl_v2_init
+
+    PulseEkko3DAnalysis.plot_time_lapse_map = _pe_plot_time_lapse_map_v2
+
+    _PE_TL_V2_PREV_UPDATE = PulseEkko3DAnalysis.update_selected
+    def _pe_tl_v2_update_selected(self):
+        name, canvas = self.selected_canvas()
+        if name.strip().lower() == "time lapse map":
+            return self.plot_time_lapse_map()
+        return _PE_TL_V2_PREV_UPDATE(self)
+    PulseEkko3DAnalysis.update_selected = _pe_tl_v2_update_selected
+except Exception as _e:
+    print("Bulach animated time-lapse override not applied:", _e)
+# ---- END HARD OVERRIDE V2: Bulach animated time-lapse controls ----
+
+# --- time lapse open/save safe override ---
+def _tl_latest_gif(prefix, self=None):
+    from pathlib import Path
+    root = Path(__file__).resolve().parent
+    assets = root / "Assets"
+    assets.mkdir(exist_ok=True)
+    names = ("tl_last_gif_path", "last_time_lapse_gif", "_time_lapse_gif_path", "time_lapse_gif_path", "last_gif_path")
+    for name in names:
+        q = getattr(self, name, None) if self is not None else None
+        if q and Path(q).is_file() and str(q).lower().endswith(".gif"):
+            return Path(q)
+    c = list(assets.glob(prefix + "*.gif")) + list(assets.glob("*" + prefix.split("_")[0] + "*time*lapse*.gif"))
+    c = [p for p in c if p.is_file() and p.suffix.lower() == ".gif"]
+    return max(c, key=lambda p: p.stat().st_mtime) if c else None
+
+def _tl_warn(self, msg):
+    try:
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.warning(self, "Time-lapse GIF", msg)
+    except Exception:
+        print(msg)
+
+def _tl_open_gif(prefix, self=None):
+    p = _tl_latest_gif(prefix, self)
+    if not p:
+        return _tl_warn(self, "No valid time-lapse GIF found. Generate the Time Lapse Map first.")
+    import subprocess
+    subprocess.Popen(["xdg-open", str(p)])
+
+def _tl_save_gif_as(prefix, self=None):
+    p = _tl_latest_gif(prefix, self)
+    if not p:
+        return _tl_warn(self, "No valid time-lapse GIF found. Generate the Time Lapse Map first.")
+    from pathlib import Path
+    import shutil
+    try:
+        from PyQt6.QtWidgets import QFileDialog
+        out, _ = QFileDialog.getSaveFileName(self, "Save time-lapse GIF as", str(Path.home() / p.name), "GIF files (*.gif)")
+    except Exception:
+        out = str(Path.home() / p.name)
+    if not out:
+        return
+    if not out.lower().endswith(".gif"):
+        out += ".gif"
+    shutil.copyfile(str(p), out)
+    print("Saved GIF as:", out)
+
+def _schl_tl_open_gif(self):
+    return _tl_open_gif("Schleitheim_time_lapse", self)
+
+def _schl_tl_save_as(self):
+    return _tl_save_gif_as("Schleitheim_time_lapse", self)
+
+def _bulach_tl_open_gif(self):
+    return _tl_open_gif("Bulach_time_lapse", self)
+
+def _bulach_tl_save_as(self):
+    return _tl_save_gif_as("Bulach_time_lapse", self)
+
+def _pulse_tl_open_gif(self):
+    return _tl_open_gif("Bulach_time_lapse", self)
+
+def _pulse_tl_save_as(self):
+    return _tl_save_gif_as("Bulach_time_lapse", self)
+# --- time lapse return-im colourbar patch ---
+
+# --- selected_canvas time lapse alias patch ---
+
+# --- fixed geometry for time-lapse saved GIF patch ---
+
+
+# --- stable_time_lapse_patch import: Bulach ---
+try:
+    import stable_time_lapse_patch as _stable_tl_patch
+    _stable_tl_patch.apply_bulach(globals())
+except Exception as _e:
+    print("Stable Bulach time-lapse patch not applied:", _e)
+# --- end stable_time_lapse_patch import: Bulach ---
+
+
+
+# --- direction amplitude balancing patch ---
+def _pe_dir_amp_add_control(self):
+    try:
+        if getattr(self, "_direction_amp_added", False):
+            return
+        from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QComboBox
+        row = QWidget(self)
+        box = QHBoxLayout(row)
+        box.setContentsMargins(4, 2, 4, 2)
+        box.addWidget(QLabel("Direction amplitude handling"))
+        self.direction_amp = QComboBox(row)
+        self.direction_amp.addItems(["No direction balancing", "Balance inline/crossline groups", "Per-line normalisation"])
+        self.direction_amp.setCurrentText("No direction balancing")
+        box.addWidget(self.direction_amp)
+        box.addStretch(1)
+        lay = self.layout()
+        if lay is not None:
+            lay.insertWidget(2 if lay.count() >= 2 else lay.count(), row)
+        self._direction_amp_added = True
+    except Exception as e:
+        print("Bulach direction amplitude control not added:", e)
+try:
+    if not getattr(PulseEkko3DAnalysis, "_direction_amp_patched", False):
+        _pe_old_init_dir_amp = PulseEkko3DAnalysis.__init__
+        def _pe_new_init_dir_amp(self, *a, **kw):
+            _pe_old_init_dir_amp(self, *a, **kw)
+            _pe_dir_amp_add_control(self)
+        PulseEkko3DAnalysis.__init__ = _pe_new_init_dir_amp
+        PulseEkko3DAnalysis._direction_amp_patched = True
+except Exception as _e:
+    print("Bulach direction amplitude patch failed:", _e)
+# --- end direction amplitude balancing patch ---
+
+
+# ---- 3D STOLT MIGRATION HOOK ----
+try:
+    import gpr3d_migration as _gpr3d_mig
+    _gpr3d_mig.apply_bulach(globals())
+except Exception as _e:
+    print("3-D Stolt migration hook failed for Bulach/PulseEKKO:", _e)
+# ---- END 3D STOLT MIGRATION HOOK ----

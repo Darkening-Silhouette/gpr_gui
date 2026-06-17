@@ -1546,10 +1546,10 @@ class MainWindow(QMainWindow):
         self.clip.setSuffix(" %")
 
         self.bg = QCheckBox("Local median background removal")
-        self.bg.setChecked(True)
+        self.bg.setChecked(False)
 
         self.bp = QCheckBox("Bandpass")
-        self.bp.setChecked(True)
+        self.bp.setChecked(False)
 
         self.bg_window = QSpinBox()
         self.bg_window.setRange(11, 1001)
@@ -4822,3 +4822,933 @@ GPR3DAnalysisTab = GPR3DStandardAnalysisTab
 if __name__ == "__main__":
     main()
 
+
+# ---- HARD OVERRIDE: replace Schleitheim depth slice with time-lapse GIF map ----
+def _gpr3d_assets_dir():
+    d = Path(__file__).resolve().parent / "Assets"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _gpr3d_hide_depth_controls(self):
+    """Hide arbitrary depth/depth-velocity controls after the original UI is built."""
+    try:
+        for attr in ("depth", "velocity"):
+            w = getattr(self, attr, None)
+            if w is not None:
+                w.hide()
+                w.setVisible(False)
+        for lab in self.findChildren(QLabel):
+            if lab.text().strip().lower() in {"depth", "velocity"}:
+                lab.hide()
+                lab.setVisible(False)
+        for i in range(self.tabs.count()):
+            if self.tabs.tabText(i).strip().lower() == "depth slice map":
+                self.tabs.setTabText(i, "Time Lapse Map")
+    except Exception:
+        pass
+
+
+def _gpr3d_plot_time_lapse_frame(self, ax, time_ns, title_prefix="Schleitheim time-lapse map"):
+    x, y, val = self.collect_slice_points(float(time_ns))
+    ax.clear()
+    if len(val) < 4:
+        ax.text(0.5, 0.5, f"Not enough points at {time_ns:.1f} ns", transform=ax.transAxes, ha="center", va="center")
+        return None
+    vmin, vmax = self.robust_clip(val)
+    im = None
+    try:
+        from scipy.interpolate import griddata
+        nx, ny = 280, 180
+        xi = np.linspace(float(np.nanmin(x)), float(np.nanmax(x)), nx)
+        yi = np.linspace(float(np.nanmin(y)), float(np.nanmax(y)), ny)
+        X, Y = np.meshgrid(xi, yi)
+        Z = griddata((x, y), val, (X, Y), method="linear")
+        im = ax.imshow(
+            Z,
+            extent=[xi.min(), xi.max(), yi.min(), yi.max()],
+            origin="lower",
+            cmap=self.main.cmap.currentText(),
+            vmin=vmin,
+            vmax=vmax,
+            aspect="equal",
+        )
+    except Exception:
+        im = ax.scatter(x, y, c=val, s=6, cmap=self.main.cmap.currentText(), vmin=vmin, vmax=vmax)
+    try:
+        self.add_abcd_2d(ax)
+    except Exception:
+        pass
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlabel("Local easting [m]")
+    ax.set_ylabel("Local northing [m]")
+    ax.set_title(f"{title_prefix}: {time_ns:.1f} ns")
+    ax.grid(True, alpha=0.25)
+    try:
+        if im is not None:
+            for _ax in list(ax.figure.axes):
+                if getattr(_ax, "_tl_cbar_ax", False):
+                    _ax.remove()
+            _tl_cbar = ax.figure.colorbar(im, ax=ax, fraction=0.035, pad=0.02)
+            _tl_cbar.ax._tl_cbar_ax = True
+            _tl_cbar.set_label("Relative amplitude", fontsize=8)
+            _tl_cbar.ax.tick_params(labelsize=7)
+            try:
+                ax.figure.set_size_inches(8.0, 6.0, forward=True)
+                ax.set_position([0.08, 0.15, 0.73, 0.74])
+                _tl_cbar.ax.set_position([0.85, 0.15, 0.025, 0.74])
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return im
+
+
+def _gpr3d_plot_time_lapse_map(self):
+    from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QApplication
+    from PyQt6.QtCore import Qt
+    from matplotlib.figure import Figure
+    from matplotlib.animation import FuncAnimation, PillowWriter
+
+    tmax = float(self.proj_tmax.value())
+    if not np.isfinite(tmax) or tmax <= 0:
+        tmax = 100.0
+    nframes = int(np.clip(round(tmax / 5.0) + 1, 12, 80))
+    frames = np.linspace(0.0, tmax, nframes)
+
+    assets = _gpr3d_assets_dir()
+    out = assets / f"Schleitheim_time_lapse_0_to_{tmax:.0f}ns.gif"
+
+    dlg = QProgressDialog("Building Schleitheim time-lapse GIF...", "Cancel", 0, nframes + 2, self)
+    dlg.setWindowTitle("Schleitheim time-lapse map")
+    dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+    dlg.setMinimumDuration(0)
+    dlg.setAutoClose(False)
+    dlg.setAutoReset(False)
+    dlg.show()
+    QApplication.processEvents()
+
+    fig = Figure(figsize=(8, 6), dpi=120, constrained_layout=True)
+    ax = fig.add_subplot(111)
+
+    def update(i):
+        if dlg.wasCanceled():
+            raise RuntimeError("Cancelled by user.")
+        tns = float(frames[i])
+        dlg.setLabelText(f"Rendering frame {i + 1}/{nframes}: {tns:.1f} ns")
+        dlg.setValue(i)
+        QApplication.processEvents()
+        _gpr3d_plot_time_lapse_frame(self, ax, tns)
+        return []
+
+    try:
+        anim = FuncAnimation(fig, update, frames=len(frames), interval=250, blit=False, repeat=True)
+        anim.save(out, writer=PillowWriter(fps=4))
+        dlg.setValue(nframes + 1)
+        dlg.setLabelText("Updating GUI preview...")
+        QApplication.processEvents()
+        c = self.depth_canvas
+        c.fig.clear()
+        ax2 = c.fig.add_subplot(111)
+        _gpr3d_plot_time_lapse_frame(self, ax2, float(frames[-1]), "Schleitheim time-lapse preview")
+        c.remember_home()
+        c.draw_idle()
+        self.main.status.setText(f"Saved Schleitheim time-lapse GIF: {out}")
+        QMessageBox.information(self, "Time-lapse GIF saved", f"Saved:\n{out}")
+    except Exception as e:
+        self.main.status.setText(f"Time-lapse GIF failed: {e}")
+        QMessageBox.critical(self, "Time-lapse GIF failed", str(e))
+    finally:
+        dlg.close()
+
+
+try:
+    _GPR3D_ORIG_INIT_TIME_LAPSE = GPR3DStandardAnalysisTab.__init__
+    def _gpr3d_init_time_lapse(self, main_window):
+        _GPR3D_ORIG_INIT_TIME_LAPSE(self, main_window)
+        _gpr3d_hide_depth_controls(self)
+    GPR3DStandardAnalysisTab.__init__ = _gpr3d_init_time_lapse
+
+    GPR3DStandardAnalysisTab.plot_time_lapse_map = _gpr3d_plot_time_lapse_map
+
+    _GPR3D_ORIG_UPDATE_TIME_LAPSE = GPR3DStandardAnalysisTab.update_current_view
+    def _gpr3d_update_current_view_time_lapse(self):
+        idx = self.tabs.currentIndex()
+        tab_name = self.tabs.tabText(idx).strip().lower()
+        if idx == 2 or tab_name == "time lapse map":
+            return self.plot_time_lapse_map()
+        return _GPR3D_ORIG_UPDATE_TIME_LAPSE(self)
+    GPR3DStandardAnalysisTab.update_current_view = _gpr3d_update_current_view_time_lapse
+
+    GPR3DAnalysisTab = GPR3DStandardAnalysisTab
+except Exception as _e:
+    print("Schleitheim time-lapse override not applied:", _e)
+# ---- END HARD OVERRIDE: Schleitheim time-lapse GIF map ----
+
+# ---- HARD OVERRIDE V2: Schleitheim animated time-lapse controls ----
+def _schl_tl_fmt_num(x):
+    try:
+        s = ("%.2f" % float(x)).rstrip("0").rstrip(".")
+    except Exception:
+        s = str(x)
+    return s.replace(".", "p")
+
+
+def _schl_tl_speed_value(self):
+    try:
+        return float(self.tl_speed.currentText().replace("x", ""))
+    except Exception:
+        return 1.0
+
+
+def _schl_tl_step_value(self):
+    try:
+        v = float(self.tl_step_ns.value())
+        return v if v > 0 else 5.0
+    except Exception:
+        return 5.0
+
+
+def _schl_tl_frames(self):
+    import numpy as _np
+    try:
+        tmax = float(self.proj_tmax.value())
+    except Exception:
+        tmax = 180.0
+    if not _np.isfinite(tmax) or tmax <= 0:
+        tmax = 180.0
+    step = _schl_tl_step_value(self)
+    frames = list(_np.arange(0.0, tmax + 0.5 * step, step, dtype=float))
+    if not frames or frames[-1] < tmax:
+        frames.append(float(tmax))
+    return frames, float(tmax), float(step)
+
+
+def _schl_tl_draw_progress_axis(pax, idx, n, time_ns, loop_no=0):
+    from matplotlib.patches import Rectangle
+    pax.clear()
+    pax.set_xlim(0, 1)
+    pax.set_ylim(0, 1)
+    pax.axis("off")
+    frac = 1.0 if n <= 1 else float(idx) / float(n - 1)
+    pax.add_patch(Rectangle((0.02, 0.28), 0.96, 0.44, fill=False, linewidth=1.0))
+    pax.add_patch(Rectangle((0.02, 0.28), 0.96 * frac, 0.44, alpha=0.65))
+    pax.text(0.5, 0.5, f"{time_ns:.1f} ns | frame {idx + 1}/{n} | loop {loop_no + 1}", ha="center", va="center", fontsize=9)
+
+
+def _schl_tl_draw_canvas_frame(self, time_ns, idx, n, loop_no=0):
+    c = self.depth_canvas
+    c.fig.clear()
+    gs = c.fig.add_gridspec(2, 1, height_ratios=[20, 1], hspace=0.28)
+    ax = c.fig.add_subplot(gs[0, 0])
+    pax = c.fig.add_subplot(gs[1, 0])
+    _gpr3d_plot_time_lapse_frame(self, ax, float(time_ns), "Schleitheim time-lapse map")
+    _schl_tl_draw_progress_axis(pax, int(idx), int(n), float(time_ns), int(loop_no))
+    try:
+        c.remember_home()
+    except Exception:
+        pass
+    c.draw_idle()
+
+
+def _schl_tl_tick(self):
+    frames = getattr(self, "_tl_frames", [])
+    if not frames:
+        return
+    n = len(frames)
+    idx = int(getattr(self, "_tl_idx", 0))
+    loop_no = int(getattr(self, "_tl_loop", 0))
+    if idx >= n:
+        idx = 0
+        loop_no += 1
+        self._tl_loop = loop_no
+    _schl_tl_draw_canvas_frame(self, frames[idx], idx, n, loop_no)
+    try:
+        self.tl_progress.setRange(0, max(0, n - 1))
+        self.tl_progress.setValue(idx)
+        self.tl_progress.setFormat(f"{frames[idx]:.1f} ns  |  frame {idx + 1}/{n}  |  loop {loop_no + 1}")
+    except Exception:
+        pass
+    self._tl_idx = idx + 1
+
+
+def _schl_tl_start_preview(self, frames):
+    from PyQt6.QtCore import QTimer
+    try:
+        if getattr(self, "_tl_timer", None) is not None:
+            self._tl_timer.stop()
+    except Exception:
+        pass
+    self._tl_frames = [float(x) for x in frames]
+    self._tl_idx = 0
+    self._tl_loop = 0
+    timer = QTimer(self)
+    timer.timeout.connect(lambda: _schl_tl_tick(self))
+    self._tl_timer = timer
+    _schl_tl_tick(self)
+    interval_ms = max(40, int(round(250.0 / _schl_tl_speed_value(self))))
+    timer.start(interval_ms)
+
+
+def _schl_tl_open_latest(self):
+    from pathlib import Path as _Path
+    from PyQt6.QtCore import QUrl
+    from PyQt6.QtGui import QDesktopServices
+    from PyQt6.QtWidgets import QMessageBox
+    p = _Path(str(getattr(self, "_tl_last_gif", "")))
+    if p.exists():
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(p)))
+    else:
+        QMessageBox.information(self, "No GIF yet", "Generate the Time Lapse Map first.")
+
+
+def _schl_tl_save_as(self):
+    import shutil
+    from pathlib import Path as _Path
+    from PyQt6.QtWidgets import QFileDialog, QMessageBox
+    p = _Path(str(getattr(self, "_tl_last_gif", "")))
+    if not p.exists():
+        QMessageBox.information(self, "No GIF yet", "Generate the Time Lapse Map first.")
+        return
+    out, _ = QFileDialog.getSaveFileName(self, "Save time-lapse GIF as", str(p), "GIF files (*.gif)")
+    if out:
+        if not out.lower().endswith(".gif"):
+            out += ".gif"
+        shutil.copyfile(p, out)
+        QMessageBox.information(self, "GIF copied", f"Saved copy:\n{out}")
+
+
+def _schl_tl_add_controls(self):
+    try:
+        if getattr(self, "_tl_controls_added_v2", False):
+            return
+        from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QComboBox, QDoubleSpinBox, QProgressBar
+        row = QWidget(self)
+        box = QHBoxLayout(row)
+        box.setContentsMargins(4, 2, 4, 2)
+        box.addWidget(QLabel("Time-lapse step"))
+        self.tl_step_ns = QDoubleSpinBox(row)
+        self.tl_step_ns.setRange(0.5, 50.0)
+        self.tl_step_ns.setDecimals(1)
+        self.tl_step_ns.setSingleStep(0.5)
+        self.tl_step_ns.setSuffix(" ns")
+        self.tl_step_ns.setValue(5.0)
+        box.addWidget(self.tl_step_ns)
+        box.addWidget(QLabel("Playback"))
+        self.tl_speed = QComboBox(row)
+        self.tl_speed.addItems(["0.5x", "1.0x", "1.5x"])
+        self.tl_speed.setCurrentText("1.0x")
+        box.addWidget(self.tl_speed)
+        self.tl_open_btn = QPushButton("Open GIF", row)
+        self.tl_saveas_btn = QPushButton("Save GIF As", row)
+        box.addWidget(self.tl_open_btn)
+        box.addWidget(self.tl_saveas_btn)
+        box.addStretch(1)
+        self.tl_progress = QProgressBar(self)
+        self.tl_progress.setTextVisible(True)
+        self.tl_progress.setFormat("Time-lapse not generated")
+        self.tl_open_btn.clicked.connect(lambda: _schl_tl_open_latest(self))
+        self.tl_saveas_btn.clicked.connect(lambda: _schl_tl_save_as(self))
+        lay = self.layout()
+        if lay is not None:
+            lay.insertWidget(1, row)
+            lay.addWidget(self.tl_progress)
+        self._tl_controls_added_v2 = True
+    except Exception as e:
+        print("Schleitheim time-lapse controls not added:", e)
+
+
+def _schl_plot_time_lapse_map_v2(self):
+    from pathlib import Path as _Path
+    from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QApplication
+    from PyQt6.QtCore import Qt
+    from matplotlib.figure import Figure
+    from matplotlib.animation import FuncAnimation, PillowWriter
+
+    frames, tmax, step = _schl_tl_frames(self)
+    speed = _schl_tl_speed_value(self)
+    n = len(frames)
+    assets = _Path(__file__).resolve().parent / "Assets"
+    assets.mkdir(parents=True, exist_ok=True)
+    out = assets / f"Schleitheim_time_lapse_0_to_{_schl_tl_fmt_num(tmax)}ns_step_{_schl_tl_fmt_num(step)}ns_speed_{_schl_tl_fmt_num(speed)}x.gif"
+
+    dlg = QProgressDialog("Building Schleitheim time-lapse GIF...", "Cancel", 0, n, self)
+    dlg.setWindowTitle("Schleitheim time-lapse map")
+    dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+    dlg.setMinimumDuration(0)
+    dlg.setAutoClose(False)
+    dlg.setAutoReset(False)
+    dlg.show()
+    QApplication.processEvents()
+
+    fig = Figure(figsize=(8, 6), dpi=120, constrained_layout=True)
+    gs = fig.add_gridspec(2, 1, height_ratios=[20, 1], hspace=0.28)
+    ax = fig.add_subplot(gs[0, 0])
+    pax = fig.add_subplot(gs[1, 0])
+
+    def update(i):
+        if dlg.wasCanceled():
+            raise RuntimeError("Cancelled by user.")
+        tns = float(frames[i])
+        dlg.setLabelText(f"Rendering frame {i + 1}/{n}: {tns:.1f} ns")
+        dlg.setValue(i)
+        QApplication.processEvents()
+        _gpr3d_plot_time_lapse_frame(self, ax, tns, "Schleitheim time-lapse map")
+        _schl_tl_draw_progress_axis(pax, i, n, tns, 0)
+        return []
+
+    try:
+        anim = FuncAnimation(fig, update, frames=n, interval=max(40, int(round(250.0 / speed))), blit=False, repeat=True)
+        anim.save(out, writer=PillowWriter(fps=max(1, int(round(4.0 * speed)))))
+        dlg.setValue(n)
+        self._tl_last_gif = str(out)
+        _schl_tl_start_preview(self, frames)
+        self.main.status.setText(f"Saved Schleitheim time-lapse GIF: {out}")
+        QMessageBox.information(self, "Time-lapse GIF saved", f"Saved:\n{out}")
+    except Exception as e:
+        self.main.status.setText(f"Time-lapse GIF failed: {e}")
+        QMessageBox.critical(self, "Time-lapse GIF failed", str(e))
+    finally:
+        dlg.close()
+
+
+try:
+    _SCHL_TL_V2_PREV_INIT = GPR3DStandardAnalysisTab.__init__
+    def _schl_tl_v2_init(self, main_window):
+        _SCHL_TL_V2_PREV_INIT(self, main_window)
+        try:
+            _gpr3d_hide_depth_controls(self)
+        except Exception:
+            pass
+        _schl_tl_add_controls(self)
+    GPR3DStandardAnalysisTab.__init__ = _schl_tl_v2_init
+
+    GPR3DStandardAnalysisTab.plot_time_lapse_map = _schl_plot_time_lapse_map_v2
+
+    _SCHL_TL_V2_PREV_UPDATE = GPR3DStandardAnalysisTab.update_current_view
+    def _schl_tl_v2_update_current_view(self):
+        idx = self.tabs.currentIndex()
+        tab_name = self.tabs.tabText(idx).strip().lower()
+        if idx == 2 or tab_name == "time lapse map":
+            return self.plot_time_lapse_map()
+        return _SCHL_TL_V2_PREV_UPDATE(self)
+    GPR3DStandardAnalysisTab.update_current_view = _schl_tl_v2_update_current_view
+    GPR3DAnalysisTab = GPR3DStandardAnalysisTab
+except Exception as _e:
+    print("Schleitheim animated time-lapse override not applied:", _e)
+# ---- END HARD OVERRIDE V2: Schleitheim animated time-lapse controls ----
+
+# --- time lapse open/save safe override ---
+def _tl_latest_gif(prefix, self=None):
+    from pathlib import Path
+    root = Path(__file__).resolve().parent
+    assets = root / "Assets"
+    assets.mkdir(exist_ok=True)
+    names = ("tl_last_gif_path", "last_time_lapse_gif", "_time_lapse_gif_path", "time_lapse_gif_path", "last_gif_path")
+    for name in names:
+        q = getattr(self, name, None) if self is not None else None
+        if q and Path(q).is_file() and str(q).lower().endswith(".gif"):
+            return Path(q)
+    c = list(assets.glob(prefix + "*.gif")) + list(assets.glob("*" + prefix.split("_")[0] + "*time*lapse*.gif"))
+    c = [p for p in c if p.is_file() and p.suffix.lower() == ".gif"]
+    return max(c, key=lambda p: p.stat().st_mtime) if c else None
+
+def _tl_warn(self, msg):
+    try:
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.warning(self, "Time-lapse GIF", msg)
+    except Exception:
+        print(msg)
+
+def _tl_open_gif(prefix, self=None):
+    p = _tl_latest_gif(prefix, self)
+    if not p:
+        return _tl_warn(self, "No valid time-lapse GIF found. Generate the Time Lapse Map first.")
+    import subprocess
+    subprocess.Popen(["xdg-open", str(p)])
+
+def _tl_save_gif_as(prefix, self=None):
+    p = _tl_latest_gif(prefix, self)
+    if not p:
+        return _tl_warn(self, "No valid time-lapse GIF found. Generate the Time Lapse Map first.")
+    from pathlib import Path
+    import shutil
+    try:
+        from PyQt6.QtWidgets import QFileDialog
+        out, _ = QFileDialog.getSaveFileName(self, "Save time-lapse GIF as", str(Path.home() / p.name), "GIF files (*.gif)")
+    except Exception:
+        out = str(Path.home() / p.name)
+    if not out:
+        return
+    if not out.lower().endswith(".gif"):
+        out += ".gif"
+    shutil.copyfile(str(p), out)
+    print("Saved GIF as:", out)
+
+def _schl_tl_open_gif(self):
+    return _tl_open_gif("Schleitheim_time_lapse", self)
+
+def _schl_tl_save_as(self):
+    return _tl_save_gif_as("Schleitheim_time_lapse", self)
+
+def _bulach_tl_open_gif(self):
+    return _tl_open_gif("Bulach_time_lapse", self)
+
+def _bulach_tl_save_as(self):
+    return _tl_save_gif_as("Bulach_time_lapse", self)
+
+def _pulse_tl_open_gif(self):
+    return _tl_open_gif("Bulach_time_lapse", self)
+
+def _pulse_tl_save_as(self):
+    return _tl_save_gif_as("Bulach_time_lapse", self)
+# --- time lapse return-im colourbar patch ---
+
+# --- selected_canvas time lapse alias patch ---
+
+# --- fixed geometry for time-lapse saved GIF patch ---
+
+
+# --- stable_time_lapse_patch import: Schleitheim ---
+try:
+    import stable_time_lapse_patch as _stable_tl_patch
+    _stable_tl_patch.apply_schleitheim(globals())
+except Exception as _e:
+    print("Stable Schleitheim time-lapse patch not applied:", _e)
+# --- end stable_time_lapse_patch import: Schleitheim ---
+
+
+
+# --- direction amplitude balancing patch ---
+def _dir_amp_mode(self):
+    try:
+        txt = self.direction_amp.currentText().strip().lower()
+    except Exception:
+        return "balance"
+    if "no" in txt:
+        return "none"
+    if "per-line" in txt or "per line" in txt:
+        return "line"
+    return "balance"
+
+def _dir_amp_scale(vals, keys, mode):
+    import numpy as np
+    vals = np.asarray(vals, float).copy()
+    keys = np.asarray(keys, object)
+    if vals.size == 0 or mode == "none":
+        return vals, {}
+    scales = {}
+    for k in sorted(set(keys.tolist())):
+        m = keys == k
+        vv = vals[m]
+        vv = vv[np.isfinite(vv)]
+        if vv.size:
+            s = float(np.nanpercentile(np.abs(vv), 95.0))
+            if np.isfinite(s) and s > 0:
+                scales[k] = s
+    if not scales:
+        return vals, {}
+    ref = float(np.nanmedian(list(scales.values())))
+    factors = {}
+    for k, s in scales.items():
+        f = ref / max(s, 1e-12)
+        f = max(0.25, min(4.0, f))
+        vals[keys == k] *= f
+        factors[k] = f
+    return vals, factors
+
+def _dir_amp_add_control(self, default="Balance inline/crossline groups"):
+    try:
+        if getattr(self, "_direction_amp_added", False):
+            return
+        from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QComboBox
+        row = QWidget(self)
+        box = QHBoxLayout(row)
+        box.setContentsMargins(4, 2, 4, 2)
+        box.addWidget(QLabel("Direction amplitude handling"))
+        self.direction_amp = QComboBox(row)
+        self.direction_amp.addItems(["Balance inline/crossline groups", "No direction balancing", "Per-line normalisation"])
+        self.direction_amp.setCurrentText(default)
+        box.addWidget(self.direction_amp)
+        box.addStretch(1)
+        lay = self.layout()
+        if lay is not None:
+            lay.insertWidget(2 if lay.count() >= 2 else lay.count(), row)
+        self._direction_amp_added = True
+    except Exception as e:
+        print("Direction amplitude control not added:", e)
+
+def _dir_amp_lines(self):
+    if hasattr(self, "selected_lines_for_maps"):
+        return self.selected_lines_for_maps()
+    return self.selected_lines()
+
+def _dir_amp_trace_xy(self, line, ntrace):
+    if hasattr(self, "trace_xy"):
+        x, y = self.trace_xy(line, ntrace)
+        return x, y
+    x, y, _ = self.trace_xyz(line, ntrace)
+    return x, y
+
+def _dir_amp_parent(line):
+    try:
+        return line.folder.parent.name.lower()
+    except Exception:
+        return "unknown"
+
+def _dir_amp_collect_slice_points(self, time_ns):
+    import numpy as np
+    from PyQt6.QtWidgets import QApplication
+    xs, ys, vals, groups, linekeys = [], [], [], [], []
+    lines = _dir_amp_lines(self)
+    step = max(1, int(self.trace_step.value()))
+    for k, line in enumerate(lines, 1):
+        try:
+            if hasattr(self.main, "status"):
+                self.main.status.setText(f"Sampling {k}/{len(lines)}: {line.name}")
+                QApplication.processEvents()
+            data = self.ensure_data(line)
+            if data is None or data.ndim != 2:
+                continue
+            t = self.time_vector(line, data.shape[1])
+            if float(time_ns) < np.nanmin(t) or float(time_ns) > np.nanmax(t):
+                continue
+            j = int(np.argmin(np.abs(t - float(time_ns))))
+            x, y = _dir_amp_trace_xy(self, line, data.shape[0])
+            idx = np.arange(0, data.shape[0], step)
+            v = data[idx, j]
+            xs.extend(x[idx]); ys.extend(y[idx]); vals.extend(v)
+            parent = _dir_amp_parent(line)
+            groups.extend([parent] * len(idx))
+            linekeys.extend([f"{parent}:{getattr(line, 'number', line.name)}"] * len(idx))
+        except Exception as e:
+            print("Skipping", getattr(line, "name", "?"), e)
+    vals = np.asarray(vals, float)
+    mode = _dir_amp_mode(self)
+    keys = linekeys if mode == "line" else groups
+    vals, factors = _dir_amp_scale(vals, keys, mode)
+    self._last_direction_amp_factors = factors
+    return np.asarray(xs), np.asarray(ys), vals
+
+def _dir_amp_plot_projection(self):
+    import numpy as np
+    from PyQt6.QtWidgets import QApplication
+    c = self.proj_canvas
+    c.fig.clear()
+    ax = c.fig.add_subplot(111)
+    tmin = float(self.proj_tmin.value()); tmax = float(self.proj_tmax.value())
+    if tmax <= tmin:
+        tmax = tmin + 1.0
+    xs, ys, vals, groups, linekeys = [], [], [], [], []
+    lines = _dir_amp_lines(self)
+    step = max(1, int(self.trace_step.value()))
+    for k, line in enumerate(lines, 1):
+        try:
+            if hasattr(self.main, "status"):
+                self.main.status.setText(f"Projection {k}/{len(lines)}: {line.name}")
+                QApplication.processEvents()
+            data = self.ensure_data(line)
+            t = self.time_vector(line, data.shape[1])
+            good = np.where((t >= tmin) & (t <= tmax))[0]
+            if len(good) < 2:
+                continue
+            x, y = _dir_amp_trace_xy(self, line, data.shape[0])
+            idx = np.arange(0, data.shape[0], step)
+            amp = np.nanmax(np.abs(data[np.ix_(idx, good)]), axis=1)
+            xs.extend(x[idx]); ys.extend(y[idx]); vals.extend(amp)
+            parent = _dir_amp_parent(line)
+            groups.extend([parent] * len(idx))
+            linekeys.extend([f"{parent}:{getattr(line, 'number', line.name)}"] * len(idx))
+        except Exception as e:
+            print("Skipping projection", getattr(line, "name", "?"), e)
+    x=np.asarray(xs); y=np.asarray(ys); val=np.asarray(vals, float)
+    mode = _dir_amp_mode(self)
+    keys = linekeys if mode == "line" else groups
+    val, factors = _dir_amp_scale(val, keys, mode)
+    self._last_direction_amp_factors = factors
+    if len(val) < 4:
+        ax.text(0.5,0.5,"Not enough points for projection",transform=ax.transAxes,ha="center",va="center")
+        c.draw_idle(); return
+    vmax = np.nanpercentile(val[np.isfinite(val)], float(self.main.clip.value()))
+    vmax = max(float(vmax), 1e-12)
+    try:
+        from scipy.interpolate import griddata
+        nx, ny = 280, 180
+        xi=np.linspace(float(np.nanmin(x)), float(np.nanmax(x)), nx)
+        yi=np.linspace(float(np.nanmin(y)), float(np.nanmax(y)), ny)
+        X,Y=np.meshgrid(xi,yi)
+        Z=griddata((x,y), val, (X,Y), method="linear")
+        im=ax.imshow(Z, extent=[xi.min(),xi.max(),yi.min(),yi.max()], origin="lower", cmap="inferno", vmin=0, vmax=vmax, aspect="equal")
+        c.fig.colorbar(im, ax=ax, shrink=0.8, label="Max |amplitude|")
+        ax.scatter(x,y,s=1.5,c="k",alpha=0.15)
+    except Exception:
+        sc=ax.scatter(x,y,c=val,s=6,cmap="inferno",vmin=0,vmax=vmax)
+        c.fig.colorbar(sc, ax=ax, shrink=0.8, label="Max |amplitude|")
+    try:
+        self.add_abcd_2d(ax)
+    except Exception:
+        pass
+    suffix = {"none":"no direction balancing","balance":"inline/crossline balanced","line":"per-line normalised"}[_dir_amp_mode(self)]
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xlabel("Local easting [m]"); ax.set_ylabel("Local northing [m]")
+    ax.set_title(f"Amplitude projection map, max |amplitude| from {tmin:.1f}–{tmax:.1f} ns | {suffix}")
+    ax.grid(True, alpha=0.25)
+    c.remember_home(); c.draw_idle()
+    if hasattr(self.main, "status"):
+        self.main.status.setText(f"Updated amplitude projection with {suffix}; factors={factors}")
+
+for _cls_name in ("GPR3DStandardAnalysisTab","GPR3DAnalysisTab"):
+    _cls = globals().get(_cls_name)
+    if _cls is not None and not getattr(_cls, "_direction_amp_patched", False):
+        _old_init = _cls.__init__
+        def _new_init(self, *a, _old_init=_old_init, **kw):
+            _old_init(self, *a, **kw)
+            _dir_amp_add_control(self, "Balance inline/crossline groups")
+        _cls.__init__ = _new_init
+        _cls.collect_slice_points = _dir_amp_collect_slice_points
+        _cls.plot_projection = _dir_amp_plot_projection
+        _cls._direction_amp_patched = True
+# --- end direction amplitude balancing patch ---
+
+
+
+
+# --- bad-line QC patch ---
+def _blq_line_key(line):
+    try:
+        parent = line.folder.parent.name.lower()
+    except Exception:
+        parent = "unknown"
+    try:
+        num = int(line.number)
+    except Exception:
+        num = -1
+    try:
+        name = str(line.name)
+    except Exception:
+        name = ""
+    return parent, num, name
+
+def _blq_mode(self):
+    try:
+        txt = self.bad_line_qc.currentText().strip().lower()
+    except Exception:
+        return "auto"
+    if txt.startswith("no"):
+        return "none"
+    if "known" in txt or "manual" in txt:
+        return "known"
+    return "auto"
+
+def _blq_add_control(self):
+    try:
+        if getattr(self, "_bad_line_qc_added", False):
+            return
+        from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QComboBox, QDoubleSpinBox
+        row = QWidget(self)
+        box = QHBoxLayout(row)
+        box.setContentsMargins(4, 2, 4, 2)
+
+        box.addWidget(QLabel("Bad-line QC"))
+        self.bad_line_qc = QComboBox(row)
+        self.bad_line_qc.addItems([
+            "Auto exclude high-amplitude bad lines",
+            "No bad-line filtering",
+            "Manual known bad crosslines only"
+        ])
+        self.bad_line_qc.setCurrentText("Auto exclude high-amplitude bad lines")
+        box.addWidget(self.bad_line_qc)
+
+        box.addWidget(QLabel("MAD k"))
+        self.bad_line_qc_k = QDoubleSpinBox(row)
+        self.bad_line_qc_k.setRange(2.0, 12.0)
+        self.bad_line_qc_k.setDecimals(1)
+        self.bad_line_qc_k.setSingleStep(0.5)
+        self.bad_line_qc_k.setValue(5.0)
+        box.addWidget(self.bad_line_qc_k)
+
+        box.addWidget(QLabel("Known: C51, C85, C55"))
+        box.addStretch(1)
+
+        def _clear_blq_cache(*_):
+            try:
+                self._bad_line_qc_cache = {}
+            except Exception:
+                pass
+        self.bad_line_qc.currentTextChanged.connect(_clear_blq_cache)
+        self.bad_line_qc_k.valueChanged.connect(_clear_blq_cache)
+        try:
+            self.proj_tmin.valueChanged.connect(_clear_blq_cache)
+            self.proj_tmax.valueChanged.connect(_clear_blq_cache)
+            self.mode.currentTextChanged.connect(_clear_blq_cache)
+            self.line_group.currentTextChanged.connect(_clear_blq_cache)
+            self.cross_step.valueChanged.connect(_clear_blq_cache)
+            self.inline_step.valueChanged.connect(_clear_blq_cache)
+        except Exception:
+            pass
+
+        lay = self.layout()
+        if lay is not None:
+            lay.insertWidget(min(4, lay.count()), row)
+        self._bad_line_qc_added = True
+        self._bad_line_qc_cache = {}
+        self._bad_line_qc_excluded = []
+    except Exception as e:
+        print("Bad-line QC control not added:", e)
+
+def _blq_metric_for_line(self, line):
+    import numpy as np
+    data = self.ensure_data(line)
+    if data is None or getattr(data, "ndim", 0) != 2:
+        return float("nan")
+
+    try:
+        t = self.time_vector(line, data.shape[1])
+    except Exception:
+        t = np.arange(data.shape[1], dtype=float)
+
+    try:
+        tmin = float(self.proj_tmin.value())
+        tmax = float(self.proj_tmax.value())
+    except Exception:
+        tmin, tmax = 35.0, 180.0
+    if tmax <= tmin:
+        tmax = tmin + 1.0
+
+    m = (t >= tmin) & (t <= tmax)
+    if not np.any(m):
+        m = np.ones_like(t, dtype=bool)
+
+    arr = data[:, m]
+    finite = arr[np.isfinite(arr)]
+    if finite.size == 0:
+        return float("nan")
+    return float(np.nanpercentile(np.abs(finite), 95.0))
+
+def _blq_filter_lines(self, lines):
+    import numpy as np
+    lines = list(lines)
+    mode = _blq_mode(self)
+    if mode == "none" or len(lines) < 8:
+        try:
+            self._bad_line_qc_excluded = []
+        except Exception:
+            pass
+        return lines
+
+    known_bad = {("crossline", 51), ("crossline", 85), ("crossline", 55)}
+    if mode == "known":
+        kept, bad = [], []
+        for ln in lines:
+            parent, num, name = _blq_line_key(ln)
+            if (parent, num) in known_bad:
+                bad.append(f"{parent[0].upper()}{num}")
+            else:
+                kept.append(ln)
+        self._bad_line_qc_excluded = bad
+        if bad:
+            print("Bad-line QC known exclusion:", ", ".join(bad))
+        return kept
+
+    try:
+        k = float(self.bad_line_qc_k.value())
+    except Exception:
+        k = 5.0
+
+    try:
+        tmin_key = round(float(self.proj_tmin.value()), 3)
+        tmax_key = round(float(self.proj_tmax.value()), 3)
+    except Exception:
+        tmin_key, tmax_key = 35.0, 180.0
+
+    key = (
+        tuple(_blq_line_key(ln) for ln in lines),
+        mode,
+        tmin_key,
+        tmax_key,
+        str(self.mode.currentText()) if hasattr(self, "mode") else "",
+        str(self.line_group.currentText()) if hasattr(self, "line_group") else "",
+        round(k, 2),
+    )
+    cache = getattr(self, "_bad_line_qc_cache", {})
+    if key in cache:
+        kept, bad = cache[key]
+        self._bad_line_qc_excluded = bad
+        return kept
+
+    metrics = []
+    for ln in lines:
+        try:
+            metrics.append(_blq_metric_for_line(self, ln))
+        except Exception as e:
+            print("Bad-line QC metric failed:", getattr(ln, "name", "?"), e)
+            metrics.append(float("nan"))
+
+    metrics = np.asarray(metrics, dtype=float)
+    good = np.isfinite(metrics) & (metrics > 0)
+
+    if np.count_nonzero(good) < 8:
+        bad = []
+        kept = lines
+    else:
+        logm = np.log10(metrics[good])
+        med = float(np.nanmedian(logm))
+        mad = float(np.nanmedian(np.abs(logm - med)))
+        sigma = max(1.4826 * mad, 0.08)
+        threshold = med + k * sigma
+
+        bad_mask = np.zeros(len(lines), dtype=bool)
+        bad_mask[good] = np.log10(metrics[good]) > threshold
+
+        normal_ref = float(np.nanmedian(metrics[good]))
+        for i, ln in enumerate(lines):
+            parent, num, _ = _blq_line_key(ln)
+            if (parent, num) in known_bad and np.isfinite(metrics[i]) and metrics[i] > 3.0 * max(normal_ref, 1e-12):
+                bad_mask[i] = True
+
+        kept = [ln for i, ln in enumerate(lines) if not bad_mask[i]]
+        bad = []
+        for i, ln in enumerate(lines):
+            if bad_mask[i]:
+                parent, num, name = _blq_line_key(ln)
+                bad.append(f"{parent[0].upper()}{num}")
+
+        print(
+            f"Bad-line QC auto: kept {len(kept)}/{len(lines)} lines; "
+            f"threshold log10(P95)={threshold:.3f}; excluded={', '.join(bad) if bad else 'none'}"
+        )
+
+    self._bad_line_qc_excluded = bad
+    cache[key] = (kept, bad)
+    self._bad_line_qc_cache = cache
+    return kept
+
+try:
+    _BLQ_cls = globals().get("GPR3DStandardAnalysisTab") or globals().get("GPR3DAnalysisTab")
+    if _BLQ_cls is not None and not getattr(_BLQ_cls, "_bad_line_qc_patched", False):
+        _BLQ_orig_init = _BLQ_cls.__init__
+        def _BLQ_new_init(self, *args, **kwargs):
+            _BLQ_orig_init(self, *args, **kwargs)
+            _blq_add_control(self)
+        _BLQ_cls.__init__ = _BLQ_new_init
+
+        _BLQ_orig_selected_lines_for_maps = _BLQ_cls.selected_lines_for_maps
+        def _BLQ_selected_lines_for_maps(self):
+            return _blq_filter_lines(self, _BLQ_orig_selected_lines_for_maps(self))
+        _BLQ_cls.selected_lines_for_maps = _BLQ_selected_lines_for_maps
+
+        _BLQ_cls._bad_line_qc_patched = True
+        GPR3DAnalysisTab = _BLQ_cls
+        print("Bad-line QC patch active: default auto-exclude high-amplitude lines.")
+except Exception as _e:
+    print("Bad-line QC patch failed:", _e)
+# --- end bad-line QC patch ---
+
+
+# ---- 3D STOLT MIGRATION HOOK ----
+try:
+    import gpr3d_migration as _gpr3d_mig
+    _gpr3d_mig.apply_schleitheim(globals())
+except Exception as _e:
+    print("3-D Stolt migration hook failed for Schleitheim/MALA:", _e)
+# ---- END 3D STOLT MIGRATION HOOK ----
