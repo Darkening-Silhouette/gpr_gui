@@ -317,7 +317,7 @@ def _sch_draw_frame(self, fig, time_ns, idx=0, n=1, loop_no=0, extent=None, vlim
     ax.set_aspect("equal", adjustable="box")
     ax.set_xlabel("Local easting [m]")
     ax.set_ylabel("Local northing [m]")
-    ax.set_title(f"{title_prefix}: {float(time_ns):.1f} ns | {label}, {scale_text}")
+    ax.set_title(f"{title_prefix}: {float(time_ns):.1f} ns | {label}, blue-white-red zero-centred, {scale_text}")
     ax.grid(True, alpha=0.25)
 
     if im is not None:
@@ -500,7 +500,7 @@ def _pe_values_at_time(self, time_ns):
             pass
     x = np.asarray(x, float)
     y = np.asarray(y, float)
-    v = np.abs(np.asarray(v, float))
+    v = np.asarray(v, float)  # signed amplitude for blue-white-red display
     good = np.isfinite(x) & np.isfinite(y) & np.isfinite(v)
     return x[good], y[good], v[good]
 
@@ -513,7 +513,7 @@ def _pe_global_scale(self, frames):
     for t in use:
         _, _, v = _pe_values_at_time(self, float(t))
         if len(v):
-            vals.append(v[np.isfinite(v)])
+            vals.append(np.abs(v[np.isfinite(v)]))
     vals = [v for v in vals if len(v)]
     if not vals:
         return 1.0
@@ -526,12 +526,17 @@ def _pe_global_scale(self, frames):
 
 def _pe_vlim(self, frames):
     if _amp_mode(self) == "normalised":
-        return 0.0, 1.0
-    return 0.0, _pe_global_scale(self, frames)
+        return -1.0, 1.0
+    scale = _pe_global_scale(self, frames)
+    return -scale, scale
 
 
 def _pe_prepare_values(self, raw_v, frames=None):
     raw_v = np.asarray(raw_v, float)
+    finite = raw_v[np.isfinite(raw_v)]
+    if finite.size == 0:
+        return raw_v, (-1.0, 1.0), "Signed amplitude"
+
     if _amp_mode(self) == "normalised":
         if _scale_mode(self) == "dataset":
             scale = getattr(self, "_tl_norm_scale", None)
@@ -539,18 +544,19 @@ def _pe_prepare_values(self, raw_v, frames=None):
                 scale = _pe_global_scale(self, frames or getattr(self, "_tl_frames", [0.0]))
                 self._tl_norm_scale = scale
         else:
-            scale = float(np.nanpercentile(raw_v[np.isfinite(raw_v)], 98.0)) if np.any(np.isfinite(raw_v)) else 1.0
+            scale = float(np.nanpercentile(np.abs(finite), 98.0))
             if not np.isfinite(scale) or scale <= 0:
                 scale = 1.0
-        return raw_v / scale, (0.0, 1.0), "Normalised absolute amplitude"
+        return raw_v / scale, (-1.0, 1.0), "Normalised signed amplitude"
 
     if _scale_mode(self) == "current":
-        scale = float(np.nanpercentile(raw_v[np.isfinite(raw_v)], 98.0)) if np.any(np.isfinite(raw_v)) else 1.0
+        scale = float(np.nanpercentile(np.abs(finite), 98.0))
         if not np.isfinite(scale) or scale <= 0:
             scale = 1.0
-        return raw_v, (0.0, scale), "Relative absolute amplitude"
+        return raw_v, (-scale, scale), "Signed relative amplitude"
 
-    return raw_v, getattr(self, "_tl_vlim", None) or (0.0, _pe_global_scale(self, frames or [0.0])), "Relative absolute amplitude"
+    scale = getattr(self, "_tl_vlim", None) or _pe_vlim(self, frames or [0.0])
+    return raw_v, scale, "Signed relative amplitude"
 
 
 def _pe_draw_frame(self, fig, time_ns, idx=0, n=1, loop_no=0, extent=None, vlim=None, title_prefix="Bulach time-lapse map"):
@@ -584,15 +590,15 @@ def _pe_draw_frame(self, fig, time_ns, idx=0, n=1, loop_no=0, extent=None, vlim=
                     extent=[xmin, xmax, ymin, ymax],
                     origin="lower",
                     aspect="equal",
-                    cmap="inferno",
+                    cmap="seismic",
                     vmin=vmin,
                     vmax=vmax,
                     interpolation="nearest",
                 )
             else:
-                im = ax.scatter(x, y, c=v, s=5, cmap="inferno", vmin=vmin, vmax=vmax)
+                im = ax.scatter(x, y, c=v, s=5, cmap="seismic", vmin=vmin, vmax=vmax)
         except Exception:
-            im = ax.scatter(x, y, c=v, s=5, cmap="inferno", vmin=vmin, vmax=vmax)
+            im = ax.scatter(x, y, c=v, s=5, cmap="seismic", vmin=vmin, vmax=vmax)
     else:
         ax.text(0.5, 0.5, f"No data at {float(time_ns):.1f} ns", transform=ax.transAxes, ha="center", va="center")
 
@@ -602,7 +608,7 @@ def _pe_draw_frame(self, fig, time_ns, idx=0, n=1, loop_no=0, extent=None, vlim=
     ax.set_aspect("equal", adjustable="box")
     ax.set_xlabel("Local easting [m]")
     ax.set_ylabel("Local northing [m]")
-    ax.set_title(f"{title_prefix}: {float(time_ns):.1f} ns | {label}, {scale_text}")
+    ax.set_title(f"{title_prefix}: {float(time_ns):.1f} ns | {label}, blue-white-red zero-centred, {scale_text}")
     ax.grid(True, alpha=0.2)
 
     if im is not None:
@@ -612,7 +618,7 @@ def _pe_draw_frame(self, fig, time_ns, idx=0, n=1, loop_no=0, extent=None, vlim=
     else:
         cax.axis("off")
 
-    _progress_axis(pax, idx, n, time_ns, loop_no, color="tab:orange")
+    _progress_axis(pax, idx, n, time_ns, loop_no, color="tab:blue")
 
 
 def _pe_current_canvas(self):
@@ -2007,4 +2013,203 @@ def apply_bulach(globs):
     for n in ("PulseEkko3DAnalysis", "PulseEkkoProjectWidget"):
         _tl_patch_qc_compact_class(globs.get(n))
 # --- end compact QC controls onto amplitude row patch ---
+
+
+# --- Bulach time-lapse draw only on time-lapse tab patch ---
+def _pe_active_tab_name(self):
+    try:
+        return self.tabs.tabText(self.tabs.currentIndex()).strip()
+    except Exception:
+        return ""
+
+
+def _pe_time_lapse_canvas_only(self):
+    try:
+        for i in range(self.tabs.count()):
+            if self.tabs.tabText(i).strip().lower() == "time lapse map":
+                w = self.tabs.widget(i)
+                if hasattr(w, "fig"):
+                    return w
+    except Exception:
+        pass
+
+    d = getattr(self, "canvases", None)
+    if isinstance(d, dict):
+        return d.get("Time Lapse Map") or d.get("Depth Slice Map") or d.get("Time Slice Map")
+    return None
+
+
+def _pe_draw_canvas_frame(self, time_ns, idx, n, loop_no=0):
+    # Prevent the running time-lapse loop from overwriting Amplitude Projection or other tabs.
+    if _pe_active_tab_name(self).lower() != "time lapse map":
+        return
+
+    canvas = _pe_time_lapse_canvas_only(self)
+    if canvas is None:
+        return
+
+    fig = canvas.fig
+    extent = getattr(self, "_tl_extent", None) or _pe_extent(self)
+    vlim = getattr(self, "_tl_vlim", None) if _scale_mode(self) == "dataset" else None
+    _pe_draw_frame(self, fig, float(time_ns), int(idx), int(n), int(loop_no), extent, vlim)
+    canvas.draw_idle()
+
+
+def _pe_stop_timer_when_leaving_time_lapse(self):
+    name = _pe_active_tab_name(self).lower()
+    if name == "time lapse map":
+        return
+
+    try:
+        timer = getattr(self, "_tl_timer", None)
+        if timer is not None:
+            timer.stop()
+    except Exception:
+        pass
+
+    # Redraw the selected normal tab after stopping the animation overwrite.
+    try:
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(0, self.update_selected)
+    except Exception:
+        try:
+            self.update_selected()
+        except Exception:
+            pass
+
+
+_old_apply_bulach_tl_tab_guard = globals().get("apply_bulach")
+def apply_bulach(globs):
+    if _old_apply_bulach_tl_tab_guard:
+        _old_apply_bulach_tl_tab_guard(globs)
+
+    cls = globs.get("PulseEkko3DAnalysis")
+    if cls is not None and not getattr(cls, "_bulach_tl_tab_guard_installed", False):
+        old_init = cls.__init__
+
+        def new_init(self, *args, _old=old_init, **kwargs):
+            _old(self, *args, **kwargs)
+            try:
+                self.tabs.currentChanged.connect(lambda *_: _pe_stop_timer_when_leaving_time_lapse(self))
+            except Exception:
+                pass
+
+        cls.__init__ = new_init
+        cls._bulach_tl_tab_guard_installed = True
+
+    globs["_pe_tl_draw_canvas_frame"] = _pe_draw_canvas_frame
+# --- end Bulach time-lapse draw only on time-lapse tab patch ---
+
+
+# --- Bulach ignore non-map tabs in standard update_selected patch ---
+_old_apply_bulach_ignore_nonmap_tabs = globals().get("apply_bulach")
+
+def apply_bulach(globs):
+    if _old_apply_bulach_ignore_nonmap_tabs:
+        _old_apply_bulach_ignore_nonmap_tabs(globs)
+
+    cls = globs.get("PulseEkko3DAnalysis")
+    if cls is None or getattr(cls, "_ignore_nonmap_update_tabs_installed", False):
+        return
+
+    def _active_tab_name(self):
+        try:
+            return self.tabs.tabText(self.tabs.currentIndex()).strip()
+        except Exception:
+            return ""
+
+    old_update = getattr(cls, "update_selected", None)
+    if old_update is not None:
+        def update_selected_guard(self, *args, _old=old_update, **kwargs):
+            name = _active_tab_name(self).lower()
+            # These tabs own their own canvases/widgets. The standard map updater must not run on them.
+            if name in {"2d migration", "3d migration"}:
+                return None
+            try:
+                return _old(self, *args, **kwargs)
+            except KeyError as e:
+                missing = str(e).strip("'\"").lower()
+                if missing in {"2d migration", "3d migration"}:
+                    return None
+                raise
+        cls.update_selected = update_selected_guard
+
+    old_selected = getattr(cls, "selected_canvas", None)
+    if old_selected is not None:
+        def selected_canvas_guard(self, *args, _old=old_selected, **kwargs):
+            try:
+                return _old(self, *args, **kwargs)
+            except KeyError as e:
+                missing = str(e).strip("'\"").lower()
+                if missing in {"2d migration", "3d migration"}:
+                    # No standard map canvas exists for these tabs; return safely to prevent Qt callback crash.
+                    return (str(e).strip("'\""), None)
+                raise
+        cls.selected_canvas = selected_canvas_guard
+
+    cls._ignore_nonmap_update_tabs_installed = True
+# --- end Bulach ignore non-map tabs in standard update_selected patch ---
+
+
+# --- robust Bulach non-map/migration tab guard patch ---
+_BULACH_NONMAP_TABS = {
+    "2d migration",
+    "2-d migration",
+    "3d migration",
+    "3-d migration",
+    "parallel-line 3d migration",
+    "parallel-line 3-d migration",
+    "pseudo-3d migration",
+    "pseudo-3-d migration",
+}
+
+def _bulach_current_tab_name(self):
+    try:
+        return self.tabs.tabText(self.tabs.currentIndex()).strip()
+    except Exception:
+        return ""
+
+def _bulach_is_nonmap_tab_name(name):
+    n = str(name).strip().lower()
+    return n in _BULACH_NONMAP_TABS or "migration" in n
+
+_old_apply_bulach_nonmap_guard = globals().get("apply_bulach")
+
+def apply_bulach(globs):
+    if _old_apply_bulach_nonmap_guard:
+        _old_apply_bulach_nonmap_guard(globs)
+
+    cls = globs.get("PulseEkko3DAnalysis")
+    if cls is not None and not getattr(cls, "_bulach_robust_nonmap_guard_installed", False):
+
+        old_update = getattr(cls, "update_selected", None)
+        if old_update is not None:
+            def update_selected_nonmap_guard(self, *args, _old=old_update, **kwargs):
+                name = _bulach_current_tab_name(self)
+                if _bulach_is_nonmap_tab_name(name):
+                    try:
+                        timer = getattr(self, "_tl_timer", None)
+                        if timer is not None:
+                            timer.stop()
+                    except Exception:
+                        pass
+                    try:
+                        self._status(f"{name}: using dedicated migration widget; standard map updater skipped.")
+                    except Exception:
+                        pass
+                    return None
+                return _old(self, *args, **kwargs)
+            cls.update_selected = update_selected_nonmap_guard
+
+        old_selected = getattr(cls, "selected_canvas", None)
+        if old_selected is not None:
+            def selected_canvas_nonmap_guard(self, *args, _old=old_selected, **kwargs):
+                name = _bulach_current_tab_name(self)
+                if _bulach_is_nonmap_tab_name(name):
+                    return name, None
+                return _old(self, *args, **kwargs)
+            cls.selected_canvas = selected_canvas_nonmap_guard
+
+        cls._bulach_robust_nonmap_guard_installed = True
+# --- end robust Bulach non-map/migration tab guard patch ---
 

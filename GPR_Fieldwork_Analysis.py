@@ -207,9 +207,15 @@ def process_gpr(raw, time_ns, dewow_window_ns=25.0, bg_window=151, do_bg=True, d
             sos = butter(4, [lo, hi], btype="band", fs=fs, output="sos")
             out = sosfiltfilt(sos, out, axis=1)
 
+    # Professor-style capped t-power gain.
+    # Capped at 30 ns: close to the reference processing default and safer
+    # than full-window SEC for interpretation.
     if sec_power > 0:
         t = np.asarray(time_ns, float)
-        gain = (1.0 + t / max(float(t[-1]), 1.0)) ** float(sec_power)
+        tmax_gain = 30.0
+        tt = np.minimum(np.maximum(t, 0.0), tmax_gain)
+        gain = (1.0 + tt / max(tmax_gain, 1e-9)) ** float(sec_power)
+        gain /= max(float(gain[0]), 1e-12)
         out *= gain[None, :]
 
     if do_agc:
@@ -560,7 +566,8 @@ class PulseEkkoProjectTab(QWidget):
         self.low_cut = QDoubleSpinBox(); self.low_cut.setRange(1, 5000); self.low_cut.setValue(50.0); self.low_cut.setSuffix(" MHz")
         self.high_cut = QDoubleSpinBox(); self.high_cut.setRange(1, 5000); self.high_cut.setValue(250.0); self.high_cut.setSuffix(" MHz")
 
-        self.sec_power = QDoubleSpinBox(); self.sec_power.setRange(0, 10); self.sec_power.setSingleStep(0.05); self.sec_power.setValue(0.0)
+        self.sec_gain = QCheckBox("T-power gain"); self.sec_gain.setChecked(False)
+        self.sec_power = QDoubleSpinBox(); self.sec_power.setRange(0, 10); self.sec_power.setSingleStep(0.05); self.sec_power.setValue(2.25)
         self.display_clip = QDoubleSpinBox(); self.display_clip.setRange(80, 100); self.display_clip.setDecimals(2); self.display_clip.setValue(99.50); self.display_clip.setSuffix(" %")
         self.bg_remove = QCheckBox("Local median background removal"); self.bg_remove.setChecked(False)
         self.bandpass = QCheckBox("Bandpass"); self.bandpass.setChecked(False)
@@ -590,7 +597,7 @@ class PulseEkkoProjectTab(QWidget):
         grid.addWidget(QLabel("High cut"), 0, 6)
         grid.addWidget(self.high_cut, 0, 7)
 
-        grid.addWidget(QLabel("SEC gain power"), 1, 0)
+        grid.addWidget(self.sec_gain, 1, 0)
         grid.addWidget(self.sec_power, 1, 1)
         grid.addWidget(QLabel("Display clip"), 1, 2)
         grid.addWidget(self.display_clip, 1, 3)
@@ -724,6 +731,19 @@ class PulseEkkoProjectTab(QWidget):
 
     def ensure_processed(self, line):
         self.ensure_raw(line)
+        gain_on = getattr(self, "sec_gain", None) is not None and self.sec_gain.isChecked()
+        gain_power = float(self.sec_power.value()) if gain_on else 0.0
+        parts = ["DC removal", "dewow"]
+        if self.bg_remove.isChecked():
+            parts.append("background removal")
+        if self.bandpass.isChecked():
+            parts.append("bandpass")
+        if gain_on and gain_power > 0:
+            parts.append(f"T-power gain ({gain_power:.2f})")
+        if self.agc_gain.isChecked():
+            parts.append("AGC gain")
+        line.proc_label = "Processed radargram — " + line.name + " | " + " + ".join(parts)
+
         line.proc = process_gpr(
             line.raw,
             line.time_ns,
@@ -733,7 +753,7 @@ class PulseEkkoProjectTab(QWidget):
             do_bp=self.bandpass.isChecked(),
             low_mhz=self.low_cut.value(),
             high_mhz=self.high_cut.value(),
-            sec_power=self.sec_power.value(),
+            sec_power=gain_power,
             do_agc=self.agc_gain.isChecked(),
             agc_window_ns=self.agc_window.value(),
         )
@@ -883,7 +903,7 @@ def _pulseekko_radargram_pair_plot_fixed(self):
         vmax=vmax,
         extent=[line.dist[0], line.dist[-1], tt[-1], tt[0]],
     )
-    ax.set_title(f"Processed radargram — {line.name}")
+    ax.set_title(getattr(line, "proc_label", f"Processed radargram — {line.name}"))
     ax.set_xlabel("Distance along line [m]")
     ax.set_ylabel("Two-way time [ns]")
     self.proc_canvas.draw()
@@ -2275,3 +2295,156 @@ try:
 except Exception as _e:
     print("3-D Stolt migration hook failed for Bulach/PulseEKKO:", _e)
 # ---- END 3D STOLT MIGRATION HOOK ----
+
+
+# --- Bulach time-lapse signed blue-white-red colour patch ---
+def _pe_plot_time_lapse_frame(self, ax, time_ns, title_prefix="Bulach time-lapse map"):
+    """Bulach time-lapse frame using signed amplitude: blue negative, white zero, red positive."""
+    import numpy as _np
+
+    old_time = None
+    try:
+        old_time = float(self.time_slice.value())
+        self.time_slice.setValue(float(time_ns))
+    except Exception:
+        pass
+
+    try:
+        x, y, v = self.collect_values("time")
+    finally:
+        try:
+            if old_time is not None:
+                self.time_slice.setValue(old_time)
+        except Exception:
+            pass
+
+    ax.clear()
+
+    if len(v) == 0:
+        ax.text(0.5, 0.5, f"No data at {time_ns:.1f} ns", transform=ax.transAxes, ha="center", va="center")
+        return None
+
+    finite = v[_np.isfinite(v)]
+    if finite.size == 0:
+        ax.text(0.5, 0.5, f"No finite data at {time_ns:.1f} ns", transform=ax.transAxes, ha="center", va="center")
+        return None
+
+    vmax = float(_np.nanpercentile(_np.abs(finite), 98.5))
+    if not _np.isfinite(vmax) or vmax <= 0:
+        vmax = 1.0
+
+    im = None
+    try:
+        from scipy.interpolate import griddata
+        if len(v) > 100:
+            gx = _np.linspace(float(_np.nanmin(x)), float(_np.nanmax(x)), 280)
+            gy = _np.linspace(float(_np.nanmin(y)), float(_np.nanmax(y)), 280)
+            X, Y = _np.meshgrid(gx, gy)
+            Z = griddata((x, y), v, (X, Y), method="linear")
+            im = ax.imshow(
+                Z,
+                extent=[gx.min(), gx.max(), gy.min(), gy.max()],
+                origin="lower",
+                aspect="equal",
+                cmap="seismic",
+                vmin=-vmax,
+                vmax=vmax,
+            )
+        else:
+            im = ax.scatter(x, y, c=v, s=4, cmap="seismic", vmin=-vmax, vmax=vmax)
+    except Exception:
+        im = ax.scatter(x, y, c=v, s=4, cmap="seismic", vmin=-vmax, vmax=vmax)
+
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_title(f"{title_prefix}: {time_ns:.1f} ns | signed amplitude, blue-white-red zero-centred scale")
+    ax.set_xlabel("Local easting [m]")
+    ax.set_ylabel("Local northing [m]")
+    ax.grid(True, alpha=0.2)
+
+    try:
+        if im is not None:
+            for _ax in list(ax.figure.axes):
+                if getattr(_ax, "_tl_cbar_ax", False):
+                    _ax.remove()
+            cbar = ax.figure.colorbar(im, ax=ax, fraction=0.035, pad=0.02)
+            cbar.ax._tl_cbar_ax = True
+            cbar.set_label("Signed amplitude", fontsize=8)
+            cbar.ax.tick_params(labelsize=7)
+            try:
+                ax.figure.set_size_inches(8.0, 6.0, forward=True)
+                ax.set_position([0.08, 0.15, 0.73, 0.74])
+                cbar.ax.set_position([0.85, 0.15, 0.025, 0.74])
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    return im
+# --- end Bulach time-lapse signed blue-white-red colour patch ---
+
+
+# --- restore Bulach clear inline processing defaults patch ---
+def _pe_restore_clear_processing_defaults(self):
+    """Restore the clearer PulseEKKO inline processing/display defaults."""
+    try:
+        self.dewow_window.setValue(5.0)
+        self.low_cut.setValue(50.0)
+        self.high_cut.setValue(250.0)
+        self.sec_power.setValue(0.90)
+        self.display_clip.setValue(99.50)
+        self.bg_remove.setChecked(True)
+        self.bandpass.setChecked(True)
+        self.agc_gain.setChecked(False)
+        self.agc_window.setValue(80.0)
+        self.display_min.setValue(0.0)
+        self.display_max.setValue(50.0)
+        self.vertical_exag.setValue(1.50)
+        self.scale.setCurrentText('symlog')
+        self.cmap.setCurrentText('seismic')
+    except Exception:
+        pass
+
+
+def _pe_clear_processed_cache(self, *args):
+    try:
+        for line in getattr(self, 'lines', []):
+            line.proc = None
+        if hasattr(self, 'status'):
+            self.status.setText('Processing settings changed; processed cache cleared. Click Process current line.')
+    except Exception:
+        pass
+
+
+try:
+    if not hasattr(PulseEkkoProjectTab, '_orig_init_restore_clear_processing_defaults'):
+        PulseEkkoProjectTab._orig_init_restore_clear_processing_defaults = PulseEkkoProjectTab.__init__
+
+    def _pe_init_restore_clear_processing_defaults(self, *args, **kwargs):
+        PulseEkkoProjectTab._orig_init_restore_clear_processing_defaults(self, *args, **kwargs)
+        _pe_restore_clear_processing_defaults(self)
+
+        try:
+            for w in [self.dewow_window, self.low_cut, self.high_cut, self.sec_power, self.bg_window,
+                      self.agc_window, self.display_min, self.display_max, self.display_clip, self.vertical_exag]:
+                try:
+                    w.valueChanged.connect(lambda *_, obj=self: _pe_clear_processed_cache(obj))
+                except Exception:
+                    pass
+            for cb in [self.bg_remove, self.bandpass, self.agc_gain, self.t0_auto]:
+                try:
+                    cb.toggled.connect(lambda *_, obj=self: _pe_clear_processed_cache(obj))
+                except Exception:
+                    pass
+            for cb in [self.scale, self.cmap]:
+                try:
+                    cb.currentTextChanged.connect(lambda *_, obj=self: _pe_clear_processed_cache(obj))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    PulseEkkoProjectTab.__init__ = _pe_init_restore_clear_processing_defaults
+except Exception:
+    pass
+# --- end restore Bulach clear inline processing defaults patch ---
+

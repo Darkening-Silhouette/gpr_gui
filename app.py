@@ -346,10 +346,16 @@ def process_gpr(
                 # rather than crashing the full 3D analysis.
                 pass
 
-    # SEC gain: compensate geometrical/attenuation decay with time
+    # Professor-style capped t-power gain.
+    # This is intentionally capped at 30 ns to avoid making late-time weak
+    # noise/scattering look like a strong reflector. Keep it OFF by default
+    # for interpretation; enable only when weak early/deeper continuity is needed.
     if sec_power > 0 and dt_ns > 0:
         t = np.arange(out.shape[1], dtype=float) * dt_ns
-        gain = (1.0 + t / max(t[-1], 1.0)) ** sec_power
+        tmax_gain = 30.0
+        tt = np.minimum(np.maximum(t, 0.0), tmax_gain)
+        gain = (1.0 + tt / max(tmax_gain, 1e-9)) ** float(sec_power)
+        gain /= max(float(gain[0]), 1e-12)
         out *= gain[None, :]
 
     # AGC: maximise weak hyperbola limb visibility
@@ -646,7 +652,21 @@ class LineTab(QWidget):
         ax = self.proc_canvas.fig.add_subplot(111)
         img, kw = self.imshow_kwargs(proc)
         ax.imshow(display_matrix(img), aspect="auto", extent=extent, interpolation="bilinear", **kw)
-        ax.set_title("Processed: DC removal + dewow + background removal + optional bandpass + SEC gain")
+        label = getattr(self.line, "processing_label", None)
+        if label is None:
+            parts = ["DC removal"]
+            if float(self.main.dewow_ns.value()) > 0:
+                parts.append("dewow")
+            if self.main.bg.isChecked():
+                parts.append("background removal")
+            if self.main.bp.isChecked():
+                parts.append("bandpass")
+            if getattr(self.main, "sec_enabled", None) is not None and self.main.sec_enabled.isChecked() and float(self.main.sec_power.value()) > 0:
+                parts.append("T-power gain")
+            if self.main.agc.isChecked():
+                parts.append("AGC gain")
+            label = "Processed: " + " + ".join(parts)
+        ax.set_title(label)
         ax.set_ylabel("Two-way time [ns]")
         ax.set_xlabel("Distance along displayed line [m]")
         self.proc_ax = ax
@@ -1537,8 +1557,11 @@ class MainWindow(QMainWindow):
 
         self.sec_power = QDoubleSpinBox()
         self.sec_power.setRange(0.0, 10.0)
-        self.sec_power.setValue(0.9)
+        self.sec_power.setValue(2.25)
         self.sec_power.setSingleStep(0.1)
+
+        self.sec_enabled = QCheckBox("T-power gain")
+        self.sec_enabled.setChecked(False)
 
         self.clip = QDoubleSpinBox()
         self.clip.setRange(80.0, 99.99)
@@ -1614,7 +1637,7 @@ class MainWindow(QMainWindow):
         grid.addWidget(self.low_mhz, 0, 5)
         grid.addWidget(QLabel("High cut"), 0, 6)
         grid.addWidget(self.high_mhz, 0, 7)
-        grid.addWidget(QLabel("SEC gain power"), 1, 0)
+        grid.addWidget(self.sec_enabled, 1, 0)
         grid.addWidget(self.sec_power, 1, 1)
         grid.addWidget(QLabel("Display clip"), 1, 2)
         grid.addWidget(self.clip, 1, 3)
@@ -1652,7 +1675,7 @@ class MainWindow(QMainWindow):
             w.currentTextChanged.connect(self.redraw_all)
         for w in [self.clip, self.sec_power, self.dewow_ns, self.low_mhz, self.high_mhz, self.bg_window, self.agc_window, self.display_tmin, self.display_tmax, self.vertical_exag]:
             w.valueChanged.connect(self.redraw_all)
-        for w in [self.align_display, self.agc]:
+        for w in [self.align_display, self.bg, self.bp, self.sec_enabled, self.agc]:
             w.stateChanged.connect(self.redraw_all)
 
         self.load_project()
@@ -2034,6 +2057,21 @@ class MainWindow(QMainWindow):
         try:
             line = tab.line
             raw = self.load_raw_line(line)
+            sec_on = (getattr(self, "sec_enabled", _GPRSecOff()).isChecked())
+            sec_val = float(self.sec_power.value()) if sec_on else 0.0
+            parts = ["Processed: DC removal"]
+            if float(self.dewow_ns.value()) > 0:
+                parts.append("dewow")
+            if self.bg.isChecked():
+                parts.append("background removal")
+            if self.bp.isChecked():
+                parts.append("bandpass")
+            if sec_on and sec_val > 0:
+                parts.append(f"T-power gain ({sec_val:.2f})")
+            if self.agc.isChecked():
+                parts.append("AGC gain")
+            line.processing_label = " + ".join(parts)
+
             line.processed = process_gpr(
                 raw,
                 dt_ns=line.dt_ns,
@@ -2042,7 +2080,7 @@ class MainWindow(QMainWindow):
                 use_bandpass=self.bp.isChecked(),
                 low_mhz=float(self.low_mhz.value()),
                 high_mhz=float(self.high_mhz.value()),
-                sec_power=float(self.sec_power.value()),
+                sec_power=(float(self.sec_power.value()) if (getattr(self, "sec_enabled", _GPRSecOff()).isChecked()) else 0.0),
                 background_window_traces=int(self.bg_window.value()),
                 use_agc=self.agc.isChecked(),
                 agc_window_ns=float(self.agc_window.value()),
@@ -3466,6 +3504,21 @@ class GPR3DStandardAnalysisTab(QWidget):
             return raw
 
         if line.processed is None:
+            sec_on = (getattr(self, "sec_enabled", _GPRSecOff()).isChecked())
+            sec_val = float(self.sec_power.value()) if sec_on else 0.0
+            parts = ["Processed: DC removal"]
+            if float(self.dewow_ns.value()) > 0:
+                parts.append("dewow")
+            if self.bg.isChecked():
+                parts.append("background removal")
+            if self.bp.isChecked():
+                parts.append("bandpass")
+            if sec_on and sec_val > 0:
+                parts.append(f"T-power gain ({sec_val:.2f})")
+            if self.agc.isChecked():
+                parts.append("AGC gain")
+            line.processing_label = " + ".join(parts)
+
             line.processed = process_gpr(
                 raw,
                 dt_ns=line.dt_ns,
@@ -3474,7 +3527,7 @@ class GPR3DStandardAnalysisTab(QWidget):
                 use_bandpass=self.main.bp.isChecked(),
                 low_mhz=float(self.main.low_mhz.value()),
                 high_mhz=float(self.main.high_mhz.value()),
-                sec_power=float(self.main.sec_power.value()),
+                sec_power=(float(self.main.sec_power.value()) if getattr(self.main, "sec_enabled", None) is None or self.main.sec_enabled.isChecked() else 0.0),
                 background_window_traces=int(self.main.bg_window.value()),
                 use_agc=self.main.agc.isChecked(),
                 agc_window_ns=float(self.main.agc_window.value()),
@@ -4818,6 +4871,50 @@ GPR3DAnalysisTab = GPR3DStandardAnalysisTab
 
 # ---- END HARD OVERRIDE: improved suspicious-zone detector ----
 
+
+
+# --- Compatibility shim: SEC checkbox exists in 2-D radargram UI, not in 3-D QC tabs ---
+class _GPRSecOff:
+    def isChecked(self):
+        return False
+
+try:
+    GPR3DStandardAnalysisTab.sec_enabled
+except Exception:
+    try:
+        GPR3DStandardAnalysisTab.sec_enabled = _GPRSecOff()
+    except Exception:
+        pass
+# --- end SEC compatibility shim ---
+
+
+# --- Compatibility shim: 3-D QC tab does not have 2-D radargram control widgets ---
+class _GPRDummyValue:
+    def __init__(self, v):
+        self._v = v
+    def value(self):
+        return self._v
+
+class _GPRDummyCheck:
+    def __init__(self, v=False):
+        self._v = bool(v)
+    def isChecked(self):
+        return self._v
+
+try:
+    GPR3DStandardAnalysisTab.dewow_ns = _GPRDummyValue(25.0)
+    GPR3DStandardAnalysisTab.bg = _GPRDummyCheck(False)
+    GPR3DStandardAnalysisTab.bp = _GPRDummyCheck(True)
+    GPR3DStandardAnalysisTab.sec_enabled = _GPRDummyCheck(False)
+    GPR3DStandardAnalysisTab.sec_power = _GPRDummyValue(0.0)
+    GPR3DStandardAnalysisTab.agc = _GPRDummyCheck(False)
+    GPR3DStandardAnalysisTab.agc_window = _GPRDummyValue(80.0)
+    GPR3DStandardAnalysisTab.bg_window = _GPRDummyValue(151)
+    GPR3DStandardAnalysisTab.low_mhz = _GPRDummyValue(50.0)
+    GPR3DStandardAnalysisTab.high_mhz = _GPRDummyValue(250.0)
+except Exception:
+    pass
+# --- end 3-D QC compatibility shim ---
 
 if __name__ == "__main__":
     main()

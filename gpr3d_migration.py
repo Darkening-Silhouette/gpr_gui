@@ -261,9 +261,9 @@ class GPR3DMigrationTab(QWidget):
         self.k_filter = QComboBox(); self.k_filter.addItems(["Off", "Light k-filter", "Medium k-filter", "Strong k-filter"])
         self.k_filter.setCurrentText("Light k-filter")
         self.velocity = QDoubleSpinBox(); self.velocity.setRange(0.02, 0.30); self.velocity.setValue(0.10); self.velocity.setSingleStep(0.005); self.velocity.setSuffix(" m/ns")
-        self.tmin = QDoubleSpinBox(); self.tmin.setRange(0, 5000); self.tmin.setValue(35.0); self.tmin.setSuffix(" ns")
+        self.tmin = QDoubleSpinBox(); self.tmin.setRange(0, 5000); self.tmin.setValue(0.0); self.tmin.setSuffix(" ns")
         self.tmax = QDoubleSpinBox(); self.tmax.setRange(0, 5000); self.tmax.setValue(180.0); self.tmax.setSuffix(" ns")
-        self.dt_out = QDoubleSpinBox(); self.dt_out.setRange(0.05, 20); self.dt_out.setValue(1.0); self.dt_out.setSingleStep(0.25); self.dt_out.setSuffix(" ns")
+        self.dt_out = QDoubleSpinBox(); self.dt_out.setRange(0.05, 20); self.dt_out.setValue(0.5); self.dt_out.setSingleStep(0.25); self.dt_out.setSuffix(" ns")
         self.grid_dx = QDoubleSpinBox(); self.grid_dx.setRange(0.02, 2.0); self.grid_dx.setValue(0.25); self.grid_dx.setSingleStep(0.05); self.grid_dx.setSuffix(" m")
         self.grid_dy = QDoubleSpinBox(); self.grid_dy.setRange(0.02, 2.0); self.grid_dy.setValue(0.25); self.grid_dy.setSingleStep(0.05); self.grid_dy.setSuffix(" m")
         self.max_nx = QSpinBox(); self.max_nx.setRange(20, 512); self.max_nx.setValue(180)
@@ -284,7 +284,7 @@ class GPR3DMigrationTab(QWidget):
             ("Data", self.data_mode), ("Attribute", self.attribute), ("Velocity", self.velocity), ("tmin", self.tmin), ("tmax", self.tmax),
             ("dt", self.dt_out), ("Grid dx", self.grid_dx), ("Grid dy", self.grid_dy), ("Max nx", self.max_nx), ("Max ny", self.max_ny),
             ("Trace step", self.trace_step), ("Max lines", self.max_lines), ("k-filter", self.k_filter), ("Pad t", self.pad_t), ("Pad xy", self.pad_xy),
-            ("Taper", self.taper_w), ("Depth slice", self.depth_slice), ("Clip", self.clip_pct)
+            ("Taper", self.taper_w), ("Bird's-eye depth slice", self.depth_slice), ("Clip", self.clip_pct)
         ]
         for i, (lab, widget) in enumerate(entries):
             r = i // 6; c = (i % 6) * 2
@@ -759,9 +759,9 @@ def _pv_compact_sidepanel_build_ui(self):
     self.k_filter.setCurrentText("Light k-filter")
 
     self.velocity = QDoubleSpinBox(); self.velocity.setRange(0.02, 0.30); self.velocity.setValue(0.10); self.velocity.setSingleStep(0.005); self.velocity.setSuffix(" m/ns")
-    self.tmin = QDoubleSpinBox(); self.tmin.setRange(0, 5000); self.tmin.setValue(35.0); self.tmin.setSuffix(" ns")
+    self.tmin = QDoubleSpinBox(); self.tmin.setRange(0, 5000); self.tmin.setValue(0.0); self.tmin.setSuffix(" ns")
     self.tmax = QDoubleSpinBox(); self.tmax.setRange(0, 5000); self.tmax.setValue(180.0); self.tmax.setSuffix(" ns")
-    self.dt_out = QDoubleSpinBox(); self.dt_out.setRange(0.05, 20); self.dt_out.setValue(1.0); self.dt_out.setSingleStep(0.25); self.dt_out.setSuffix(" ns")
+    self.dt_out = QDoubleSpinBox(); self.dt_out.setRange(0.05, 20); self.dt_out.setValue(0.5); self.dt_out.setSingleStep(0.25); self.dt_out.setSuffix(" ns")
 
     self.grid_dx = QDoubleSpinBox(); self.grid_dx.setRange(0.02, 2.0); self.grid_dx.setValue(0.25); self.grid_dx.setSingleStep(0.05); self.grid_dx.setSuffix(" m")
     self.grid_dy = QDoubleSpinBox(); self.grid_dy.setRange(0.02, 2.0); self.grid_dy.setValue(0.25); self.grid_dy.setSingleStep(0.05); self.grid_dy.setSuffix(" m")
@@ -794,7 +794,7 @@ def _pv_compact_sidepanel_build_ui(self):
         ("Pad t", self.pad_t),
         ("Pad xy", self.pad_xy),
         ("Taper", self.taper_w),
-        ("Depth slice", self.depth_slice),
+        ("Bird's-eye depth slice", self.depth_slice),
         ("Clip", self.clip_pct),
     ]
 
@@ -1305,7 +1305,7 @@ def _pv_init_gpr3d_reference_controls(self):
     # Keep screen-fit layout, but make defaults closer to the reference notebook.
     try:
         if hasattr(self, 'dt_out'):
-            self.dt_out.setValue(1.0)
+            self.dt_out.setValue(0.5)
         if hasattr(self, 'max_nx') and self.max_nx.value() < 220:
             self.max_nx.setValue(240)
         if hasattr(self, 'max_ny') and self.max_ny.value() < 90:
@@ -1784,9 +1784,9 @@ def _g3d_compact_build_ui(self):
     self.attribute = QComboBox(); self.attribute.addItems(["Signed amplitude", "Envelope amplitude", "Absolute amplitude"])
     self.attribute.setCurrentText("Signed amplitude")
     self.velocity = QDoubleSpinBox(); self.velocity.setRange(0.02, 0.30); self.velocity.setValue(0.10); self.velocity.setSingleStep(0.005); self.velocity.setSuffix(" m/ns")
-    self.tmin = QDoubleSpinBox(); self.tmin.setRange(0, 5000); self.tmin.setValue(35.0); self.tmin.setSuffix(" ns")
+    self.tmin = QDoubleSpinBox(); self.tmin.setRange(0, 5000); self.tmin.setValue(0.0); self.tmin.setSuffix(" ns")
     self.tmax = QDoubleSpinBox(); self.tmax.setRange(0, 5000); self.tmax.setValue(180.0); self.tmax.setSuffix(" ns")
-    self.dt_out = QDoubleSpinBox(); self.dt_out.setRange(0.05, 20); self.dt_out.setValue(2.5); self.dt_out.setSingleStep(0.25); self.dt_out.setSuffix(" ns")
+    self.dt_out = QDoubleSpinBox(); self.dt_out.setRange(0.05, 20); self.dt_out.setValue(0.5); self.dt_out.setSingleStep(0.25); self.dt_out.setSuffix(" ns")
     self.grid_dx = QDoubleSpinBox(); self.grid_dx.setRange(0.02, 2.0); self.grid_dx.setValue(0.25); self.grid_dx.setSingleStep(0.05); self.grid_dx.setSuffix(" m")
     self.grid_dy = QDoubleSpinBox(); self.grid_dy.setRange(0.02, 2.0); self.grid_dy.setValue(0.25); self.grid_dy.setSingleStep(0.05); self.grid_dy.setSuffix(" m")
     self.max_nx = QSpinBox(); self.max_nx.setRange(20, 512); self.max_nx.setValue(240)
@@ -1818,7 +1818,7 @@ def _g3d_compact_build_ui(self):
         ("Pad t", self.pad_t),
         ("Pad xy", self.pad_xy),
         ("Taper", self.taper_w),
-        ("Depth slice", self.depth_slice),
+        ("Bird's-eye depth slice", self.depth_slice),
         ("Clip", self.clip_pct),
     ]:
         _add(txt, w)
@@ -2158,9 +2158,9 @@ def _g3d_final_clean_build_ui(self):
     self.attribute = QComboBox(); self.attribute.addItems(["Signed amplitude", "Envelope amplitude", "Absolute amplitude"])
     self.attribute.setCurrentText("Signed amplitude")
     self.velocity = QDoubleSpinBox(); self.velocity.setRange(0.02, 0.30); self.velocity.setValue(0.10); self.velocity.setSingleStep(0.005); self.velocity.setSuffix(" m/ns")
-    self.tmin = QDoubleSpinBox(); self.tmin.setRange(0, 5000); self.tmin.setValue(35.0); self.tmin.setSuffix(" ns")
+    self.tmin = QDoubleSpinBox(); self.tmin.setRange(0, 5000); self.tmin.setValue(0.0); self.tmin.setSuffix(" ns")
     self.tmax = QDoubleSpinBox(); self.tmax.setRange(0, 5000); self.tmax.setValue(180.0); self.tmax.setSuffix(" ns")
-    self.dt_out = QDoubleSpinBox(); self.dt_out.setRange(0.05, 20); self.dt_out.setValue(2.5); self.dt_out.setSingleStep(0.25); self.dt_out.setSuffix(" ns")
+    self.dt_out = QDoubleSpinBox(); self.dt_out.setRange(0.05, 20); self.dt_out.setValue(0.5); self.dt_out.setSingleStep(0.25); self.dt_out.setSuffix(" ns")
     self.grid_dx = QDoubleSpinBox(); self.grid_dx.setRange(0.02, 2.0); self.grid_dx.setValue(0.25); self.grid_dx.setSingleStep(0.05); self.grid_dx.setSuffix(" m")
     self.grid_dy = QDoubleSpinBox(); self.grid_dy.setRange(0.02, 2.0); self.grid_dy.setValue(0.25); self.grid_dy.setSingleStep(0.05); self.grid_dy.setSuffix(" m")
     self.max_nx = QSpinBox(); self.max_nx.setRange(20, 512); self.max_nx.setValue(240)
@@ -2182,7 +2182,7 @@ def _g3d_final_clean_build_ui(self):
         ("Max nx", self.max_nx), ("Max ny", self.max_ny),
         ("Trace step", self.trace_step), ("Max lines", self.max_lines),
         ("k-filter", self.k_filter), ("Pad t", self.pad_t), ("Pad xy", self.pad_xy),
-        ("Taper", self.taper_w), ("Depth slice", self.depth_slice), ("Clip", self.clip_pct),
+        ("Taper", self.taper_w), ("Bird's-eye depth slice", self.depth_slice), ("Clip", self.clip_pct),
     ]:
         add(txt, w)
 
@@ -2313,4 +2313,1988 @@ for _name in ('GPR3DMigrationTab', 'Professor3DMigrationTab'):
     if _cls is not None:
         _g3d_patch_clean_mat_class(_cls)
 # --- end final disable stale 3-D migration extra row patch ---
+
+
+# --- selectable 3-D migration section controls patch ---
+# Adds user-selectable inline/crossline/depth controls for the migrated 3-D cube.
+# The controls choose slices through the regular binned/migrated volume, not raw file folders.
+
+def _g3d_safe_clip_v2(arr, pct=98.5):
+    import numpy as _np
+    a = _np.asarray(arr, dtype=float)
+    a = a[_np.isfinite(a)]
+    if a.size == 0:
+        return 1.0
+    v = float(_np.nanpercentile(_np.abs(a), pct))
+    return v if _np.isfinite(v) and v > 0 else 1.0
+
+
+def _g3d_add_section_selector_controls(self):
+    if getattr(self, '_g3d_section_selector_controls_added', False):
+        return
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtWidgets import QGroupBox, QFormLayout, QWidget, QHBoxLayout, QSlider, QSpinBox, QLabel
+
+    box = QGroupBox('Display slice selectors')
+    form = QFormLayout(box)
+    form.setContentsMargins(8, 8, 8, 8)
+    form.setHorizontalSpacing(8)
+    form.setVerticalSpacing(4)
+
+    def make_slider_spin():
+        row = QWidget()
+        lay = QHBoxLayout(row)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(5)
+        slider = QSlider(Qt.Orientation.Horizontal)
+        slider.setRange(0, 0)
+        slider.setEnabled(False)
+        spin = QSpinBox()
+        spin.setRange(0, 0)
+        spin.setValue(0)
+        spin.setFixedWidth(130)
+        spin.setSpecialValueText('run migration first')
+        spin.setSuffix('')
+        spin.setEnabled(False)
+        lay.addWidget(slider, 1)
+        lay.addWidget(spin, 0)
+        slider.valueChanged.connect(spin.setValue)
+        spin.valueChanged.connect(slider.setValue)
+        return row, slider, spin
+
+    self.inline_section_row, self.inline_section_slider, self.inline_section_spin = make_slider_spin()
+    self.crossline_section_row, self.crossline_section_slider, self.crossline_section_spin = make_slider_spin()
+
+    self.depth_index_row = QWidget()
+    dlay = QHBoxLayout(self.depth_index_row)
+    dlay.setContentsMargins(0, 0, 0, 0)
+    dlay.setSpacing(5)
+    self.depth_index_slider = QSlider(Qt.Orientation.Horizontal)
+    self.depth_index_slider.setRange(0, 0)
+    self.depth_index_slider.setEnabled(False)
+    self.depth_index_label = QLabel('run migration first')
+    self.depth_index_label.setMinimumWidth(72)
+    dlay.addWidget(self.depth_index_slider, 1)
+    dlay.addWidget(self.depth_index_label, 0)
+
+    form.addRow(QLabel('Along-survey section position'), self.inline_section_row)
+    form.addRow(QLabel('Across-survey section position'), self.crossline_section_row)
+    form.addRow(QLabel("Bird's-eye depth slice"), self.depth_index_row)
+
+    def request_replot(*_):
+        if getattr(self, '_g3d_selector_syncing', False):
+            return
+        if getattr(self, 'last', None):
+            self.plot_result()
+
+    self.inline_section_spin.valueChanged.connect(request_replot)
+    self.crossline_section_spin.valueChanged.connect(request_replot)
+    self.depth_slice.valueChanged.connect(request_replot)
+
+    def depth_slider_changed(val):
+        if getattr(self, '_g3d_selector_syncing', False):
+            return
+        r = getattr(self, 'last', None)
+        if not r:
+            return
+        import numpy as _np
+        depth = _np.asarray(r.get('depth', []), dtype=float)
+        if depth.size == 0:
+            return
+        iz = max(0, min(int(val), depth.size - 1))
+        self._g3d_selector_syncing = True
+        try:
+            self.depth_slice.setValue(float(depth[iz]))
+            self.depth_index_label.setText(f'z={float(depth[iz]):.2f} m')
+        finally:
+            self._g3d_selector_syncing = False
+        request_replot()
+
+    self.depth_index_slider.valueChanged.connect(depth_slider_changed)
+
+    left = None
+    try:
+        left = self.btn_run.parentWidget()
+    except Exception:
+        left = None
+    if left is not None and left.layout() is not None:
+        lay = left.layout()
+        idx = -1
+        for attr in ('live_taper', 'btn_run'):
+            w = getattr(self, attr, None)
+            if w is not None:
+                idx = lay.indexOf(w)
+                if idx >= 0:
+                    break
+        if idx < 0:
+            idx = max(0, lay.count() - 1)
+        lay.insertWidget(idx, box)
+    self._g3d_section_selector_controls_added = True
+
+
+def _g3d_update_section_selector_ranges(self, r):
+    import numpy as _np
+    if not getattr(self, '_g3d_section_selector_controls_added', False):
+        _g3d_add_section_selector_controls(self)
+    mig = _np.asarray(r['migrated'])
+    nz, nx, ny = mig.shape
+    depth = _np.asarray(r.get('depth', []), dtype=float)
+    shape_key = (int(nx), int(ny), int(depth.size), id(r.get('migrated')))
+    first_for_shape = getattr(self, '_g3d_selector_shape_key', None) != shape_key
+    self._g3d_selector_shape_key = shape_key
+
+    def set_pair(spin, slider, n, default):
+        n = max(1, int(n))
+        old = int(spin.value()) if spin.maximum() >= 1 else default
+        val = default if first_for_shape else max(1, min(old, n))
+        spin.blockSignals(True); slider.blockSignals(True)
+        try:
+            spin.setEnabled(True)
+            slider.setEnabled(True)
+            spin.setSpecialValueText('')
+            spin.setRange(1, n)
+            spin.setSuffix(f' / {n}')
+            spin.setValue(val)
+            slider.setRange(1, n)
+            slider.setValue(val)
+        finally:
+            spin.blockSignals(False); slider.blockSignals(False)
+
+    self._g3d_selector_syncing = True
+    try:
+        set_pair(self.inline_section_spin, self.inline_section_slider, nx, nx // 2 + 1)
+        set_pair(self.crossline_section_spin, self.crossline_section_slider, ny, ny // 2 + 1)
+        if depth.size:
+            old_z = float(self.depth_slice.value())
+            iz = int(_np.nanargmin(_np.abs(depth - old_z)))
+            if first_for_shape:
+                iz = int(_np.nanargmin(_np.abs(depth - old_z)))
+            self.depth_index_slider.setEnabled(True)
+            self.depth_index_slider.setRange(0, max(0, depth.size - 1))
+            self.depth_index_slider.setValue(max(0, min(iz, depth.size - 1)))
+            self.depth_index_label.setText(f'z={float(depth[max(0, min(iz, depth.size - 1))]):.2f} m')
+            self.depth_slice.setRange(float(_np.nanmin(depth)), float(_np.nanmax(depth)))
+    finally:
+        self._g3d_selector_syncing = False
+
+
+def _g3d_selected_cube_indices(self, r):
+    import numpy as _np
+    _g3d_update_section_selector_ranges(self, r)
+    mig = _np.asarray(r['migrated'])
+    nz, nx, ny = mig.shape
+    ix = int(getattr(self, 'inline_section_spin').value()) - 1
+    iy = int(getattr(self, 'crossline_section_spin').value()) - 1
+    ix = max(0, min(ix, nx - 1))
+    iy = max(0, min(iy, ny - 1))
+    depth = _np.asarray(r.get('depth', []), dtype=float)
+    if depth.size:
+        iz = int(_np.nanargmin(_np.abs(depth - float(self.depth_slice.value()))))
+    else:
+        iz = 0
+    iz = max(0, min(iz, nz - 1))
+    return ix, iy, iz
+
+
+def _g3d_plot_section_comparison_selected(self):
+    import numpy as _np
+    r = self.last
+    fig = self.canvas.fig
+    fig.clear()
+    ix, iy, _ = _g3d_selected_cube_indices(self, r)
+    x = _np.asarray(r['x'], dtype=float)
+    y = _np.asarray(r['y'], dtype=float)
+    t = _np.asarray(r['t'], dtype=float)
+    depth = _np.asarray(r['depth'], dtype=float)
+    mig = _np.asarray(r['migrated'])
+    cube_in = r.get('cube_migration_input', r.get('cube_premig', r.get('cube_display', r.get('cube'))))
+    cube_in = _np.asarray(cube_in)
+
+    axes = [fig.add_subplot(221), fig.add_subplot(222), fig.add_subplot(223), fig.add_subplot(224)]
+    panels = [
+        (axes[0], cube_in[:, ix, :], y, t, 'Across-survey position [m]', 'TWT [ns]', f'Vertical section at along-survey X={ix+1}/{mig.shape[1]}  x={x[ix]:.2f} m — input'),
+        (axes[1], mig[:, ix, :],     y, depth, 'Across-survey position [m]', 'Depth [m]', f'Vertical section at along-survey X={ix+1}/{mig.shape[1]}  x={x[ix]:.2f} m — migrated'),
+        (axes[2], cube_in[:, :, iy], x, t, 'Along-survey position [m]', 'TWT [ns]', f'Vertical section at across-survey Y={iy+1}/{mig.shape[2]}  y={y[iy]:.2f} m — input'),
+        (axes[3], mig[:, :, iy],     x, depth, 'Along-survey position [m]', 'Depth [m]', f'Vertical section at across-survey Y={iy+1}/{mig.shape[2]}  y={y[iy]:.2f} m — migrated'),
+    ]
+    for ax, data2d, lateral, vertical, xlabel, ylabel, title in panels:
+        v = _g3d_safe_clip_v2(data2d, float(self.clip_pct.value()) if hasattr(self, 'clip_pct') else 98.5)
+        im = ax.imshow(data2d, origin='upper', aspect='auto', cmap='seismic',
+                       extent=[float(lateral[0]), float(lateral[-1]), float(vertical[-1]), float(vertical[0])],
+                       vmin=-v, vmax=v)
+        ax.set_title(title, fontsize=9)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        fig.colorbar(im, ax=ax, shrink=0.72, label='Amplitude')
+    fig.suptitle('3-D Stolt migration — selectable vertical sections | '
+                 f'v={float(r.get("velocity", 0)):.3f} m/ns | dx={float(r.get("dx", 0)):.3f}, dy={float(r.get("dy", 0)):.3f} m', fontsize=11)
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    self.canvas.draw()
+    try:
+        self._status(f'Showing selected centre/default grid sections: X={ix+1}/{mig.shape[1]} at x={x[ix]:.2f} m; Y={iy+1}/{mig.shape[2]} at y={y[iy]:.2f} m.')
+    except Exception:
+        pass
+
+
+def _g3d_plot_depth_slice_mask_selected(self):
+    import numpy as _np
+    r = self.last
+    fig = self.canvas.fig
+    fig.clear()
+    ix, iy, iz = _g3d_selected_cube_indices(self, r)
+    x = _np.asarray(r['x'], dtype=float)
+    y = _np.asarray(r['y'], dtype=float)
+    t = _np.asarray(r['t'], dtype=float)
+    depth = _np.asarray(r['depth'], dtype=float)
+    mig = _np.asarray(r['migrated'])
+    cube = _np.asarray(r.get('cube_migration_input', r.get('cube_premig', r.get('cube'))))
+    target_t = 2.0 * float(depth[iz]) / max(float(r.get('velocity', 0.10)), 1e-9)
+    it = int(_np.nanargmin(_np.abs(t - target_t)))
+
+    axes = [fig.add_subplot(221), fig.add_subplot(222), fig.add_subplot(223), fig.add_subplot(224)]
+    valid = _np.asarray(r['valid']).T.astype(float)
+    im0 = axes[0].imshow(valid, origin='lower', aspect='auto', extent=[x[0], x[-1], y[0], y[-1]], cmap='gray_r')
+    axes[0].axvline(float(x[ix])); axes[0].axhline(float(y[iy]))
+    axes[0].set_title(f'Live-cell mask: {int(_np.asarray(r["valid"]).sum())}/{_np.asarray(r["valid"]).size} live')
+    axes[0].set_xlabel('Along-survey [m]'); axes[0].set_ylabel('Across-survey [m]')
+
+    v0 = _g3d_safe_clip_v2(cube[it], float(self.clip_pct.value()) if hasattr(self, 'clip_pct') else 98.5)
+    im1 = axes[1].imshow(cube[it].T, origin='lower', aspect='auto', extent=[x[0], x[-1], y[0], y[-1]], cmap='seismic', vmin=-v0, vmax=v0)
+    axes[1].axvline(float(x[ix])); axes[1].axhline(float(y[iy]))
+    axes[1].set_title(f'Input time slice near depth: {t[it]:.1f} ns')
+    axes[1].set_xlabel('Along-survey [m]'); axes[1].set_ylabel('Across-survey [m]')
+    fig.colorbar(im1, ax=axes[1], shrink=0.72)
+
+    v1 = _g3d_safe_clip_v2(mig[iz], float(self.clip_pct.value()) if hasattr(self, 'clip_pct') else 98.5)
+    im2 = axes[2].imshow(mig[iz].T, origin='lower', aspect='auto', extent=[x[0], x[-1], y[0], y[-1]], cmap='seismic', vmin=-v1, vmax=v1)
+    axes[2].axvline(float(x[ix])); axes[2].axhline(float(y[iy]))
+    axes[2].set_title(f'Migrated bird\'s-eye depth slice: z={depth[iz]:.2f} m')
+    axes[2].set_xlabel('Along-survey [m]'); axes[2].set_ylabel('Across-survey [m]')
+    fig.colorbar(im2, ax=axes[2], shrink=0.72)
+
+    sec = mig[:, :, iy]
+    v2 = _g3d_safe_clip_v2(sec, float(self.clip_pct.value()) if hasattr(self, 'clip_pct') else 98.5)
+    im3 = axes[3].imshow(sec, origin='upper', aspect='auto', extent=[x[0], x[-1], depth[-1], depth[0]], cmap='seismic', vmin=-v2, vmax=v2)
+    axes[3].axvline(float(x[ix])); axes[3].axhline(float(depth[iz]))
+    axes[3].set_title(f'Selected vertical section at across-survey Y={iy+1}/{mig.shape[2]}  y={y[iy]:.2f} m')
+    axes[3].set_xlabel('Along-survey [m]'); axes[3].set_ylabel('Depth [m]')
+    fig.colorbar(im3, ax=axes[3], shrink=0.72)
+
+    fig.suptitle('3-D migration depth-slice + selected section | '
+                 f'X={ix+1}/{mig.shape[1]}, Y={iy+1}/{mig.shape[2]}, z={depth[iz]:.2f} m', fontsize=11)
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    self.canvas.draw()
+
+
+def _g3d_patch_section_selector_class(cls):
+    if getattr(cls, '_g3d_section_selector_patch_applied', False):
+        return
+    old_build = cls._build_ui
+    old_plot = cls.plot_result
+
+    def build_with_section_selectors(self, _old=old_build):
+        _old(self)
+        _g3d_add_section_selector_controls(self)
+
+    def plot_with_section_selectors(self, _old=old_plot):
+        if not getattr(self, 'last', None):
+            return _old(self)
+        mode = self.view_mode.currentText() if getattr(self, 'view_mode', None) else 'Section comparison'
+        if mode == 'Section comparison':
+            return _g3d_plot_section_comparison_selected(self)
+        if mode == 'Depth slice + mask':
+            return _g3d_plot_depth_slice_mask_selected(self)
+        if mode == 'Input diagnostics' and globals().get('_gpr3d_plot_input_diagnostics'):
+            return globals()['_gpr3d_plot_input_diagnostics'](self)
+        if mode == 'Live taper QC' and globals().get('_gpr3d_plot_live_taper_qc'):
+            return globals()['_gpr3d_plot_live_taper_qc'](self)
+        return _old(self)
+
+    cls._build_ui = build_with_section_selectors
+    cls.plot_result = plot_with_section_selectors
+    cls._g3d_section_selector_patch_applied = True
+
+
+for _g3d_cls_name in ('GPR3DMigrationTab', 'Professor3DMigrationTab'):
+    _g3d_cls = globals().get(_g3d_cls_name)
+    if _g3d_cls is not None:
+        _g3d_patch_section_selector_class(_g3d_cls)
+# --- end selectable 3-D migration section controls patch ---
+
+
+# --- centre/default migration view patch ---
+def _g3d_update_section_selector_ranges(self, r):
+    import numpy as _np
+    if not getattr(self, '_g3d_section_selector_controls_added', False):
+        _g3d_add_section_selector_controls(self)
+
+    mig = _np.asarray(r['migrated'])
+    nz, nx, ny = mig.shape
+    depth = _np.asarray(r.get('depth', []), dtype=float)
+
+    shape_key = (int(nx), int(ny), int(depth.size), id(r.get('migrated')))
+    first_for_shape = getattr(self, '_g3d_selector_shape_key', None) != shape_key
+    self._g3d_selector_shape_key = shape_key
+
+    default_ix = max(1, nx // 2 + 1)
+    default_iy = max(1, ny // 2 + 1)
+
+    def set_pair(spin, slider, n, default):
+        n = max(1, int(n))
+        old = int(spin.value()) if spin.maximum() >= 1 else default
+        val = default if first_for_shape else max(1, min(old, n))
+        spin.blockSignals(True); slider.blockSignals(True)
+        try:
+            spin.setEnabled(True)
+            slider.setEnabled(True)
+            try:
+                spin.setSpecialValueText('')
+            except Exception:
+                pass
+            spin.setRange(1, n)
+            spin.setSuffix(f' / {n}')
+            spin.setValue(max(1, min(val, n)))
+            slider.setRange(1, n)
+            slider.setValue(max(1, min(val, n)))
+        finally:
+            spin.blockSignals(False); slider.blockSignals(False)
+
+    self._g3d_selector_syncing = True
+    try:
+        set_pair(self.inline_section_spin, self.inline_section_slider, nx, default_ix)
+        set_pair(self.crossline_section_spin, self.crossline_section_slider, ny, default_iy)
+
+        if depth.size:
+            z_wanted = float(self.depth_slice.value())
+            if first_for_shape:
+                z_wanted = 6.0 if float(_np.nanmin(depth)) <= 6.0 <= float(_np.nanmax(depth)) else float(depth[len(depth)//2])
+            iz = int(_np.nanargmin(_np.abs(depth - z_wanted)))
+            iz = max(0, min(iz, depth.size - 1))
+            self.depth_index_slider.setEnabled(True)
+            self.depth_index_slider.setRange(0, max(0, depth.size - 1))
+            self.depth_index_slider.setValue(iz)
+            self.depth_index_label.setText(f'z={float(depth[iz]):.2f} m')
+            self.depth_slice.setRange(float(_np.nanmin(depth)), float(_np.nanmax(depth)))
+            if first_for_shape:
+                self.depth_slice.setValue(float(depth[iz]))
+    finally:
+        self._g3d_selector_syncing = False
+# --- end centre/default migration view patch ---
+
+
+# --- 2-D Stolt migration tab patch v2 safe image ---
+# Adds a 2-D Stolt/f-k migration tab beside the 3-D migration tab.
+# This version avoids Qt Matplotlib canvases for the 2-D tab and renders preview PNGs into a QLabel,
+# preventing backend_qt draw recursion on some PyQt6/Matplotlib combinations.
+
+
+def _gpr2d_stolt_migration(data_tx, dt, dx, velocity, apply_jacobian=True, pad_t=1.5, pad_x=1.5, taper_t=0.05, taper_x=0.05, progress_cb=None):
+    """2-D constant-velocity Stolt migration using the same 3-D Stolt core with ny=1."""
+    data_tx = np.asarray(data_tx, dtype=np.float32)
+    if data_tx.ndim != 2:
+        raise ValueError('2-D migration input must have shape (time, distance).')
+    cube = data_tx[:, :, None]
+    mig = stolt_migration_3d(
+        cube, dt=float(dt), dx=float(dx), dy=1.0, velocity=float(velocity),
+        exploding_reflector=True, apply_jacobian=bool(apply_jacobian),
+        pad_t=float(pad_t), pad_x=float(pad_x), pad_y=1.0,
+        taper_t=float(taper_t), taper_x=float(taper_x), taper_y=0.0,
+        pad_to_pow2=True, depth_padding=2.0,
+        progress_cb=progress_cb,
+    )
+    return np.asarray(mig[:, :, 0], dtype=np.float32)
+
+
+def _gpr2d_envelope(a):
+    a = np.asarray(a, dtype=np.float32)
+    try:
+        from scipy.signal import hilbert
+        return np.abs(hilbert(a, axis=0)).astype(np.float32)
+    except Exception:
+        # Fallback: keep absolute amplitude rather than failing.
+        return np.abs(a).astype(np.float32)
+
+
+def _gpr2d_k_filter(data_tx, dx, mode):
+    mode = (mode or 'Off').lower()
+    if mode.startswith('off'):
+        return np.asarray(data_tx, dtype=np.float32)
+    d = np.asarray(data_tx, dtype=np.float32)
+    nt, nx = d.shape
+    if nx < 4:
+        return d
+    fx = np.fft.fftfreq(nx, d=max(float(dx), 1e-9))
+    kmax = float(np.nanmax(np.abs(fx))) if fx.size else 1.0
+    if 'strong' in mode:
+        frac = 0.30
+    elif 'medium' in mode:
+        frac = 0.45
+    else:
+        frac = 0.65
+    kc = max(frac * kmax, 1e-9)
+    filt = np.exp(-(np.abs(fx) / kc) ** 4).astype(np.float32)
+    F = np.fft.fft(d, axis=1)
+    return np.fft.ifft(F * filt[None, :], axis=1).real.astype(np.float32)
+
+
+class GPR2DMigrationTab(QWidget):
+    def __init__(self, analysis_owner, kind: str):
+        super().__init__()
+        self.owner = analysis_owner
+        self.kind = kind
+        self.lines = []
+        self.last = None
+        self._last_png = None
+        self._build_ui()
+        self.refresh_lines()
+
+    def _build_ui(self):
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtWidgets import (
+            QVBoxLayout, QGridLayout, QLabel, QPushButton,
+            QComboBox, QDoubleSpinBox, QSpinBox, QCheckBox, QTextEdit,
+            QWidget, QScrollArea, QSplitter, QSizePolicy
+        )
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(6, 6, 6, 6)
+        root.setSpacing(4)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        root.addWidget(splitter, 1)
+
+        left = QWidget()
+        left_lay = QVBoxLayout(left)
+        left_lay.setContentsMargins(6, 6, 6, 6)
+        left_lay.setSpacing(6)
+
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(6)
+        grid.setVerticalSpacing(5)
+
+        self.line_combo = QComboBox()
+        self.btn_refresh = QPushButton('Refresh lines')
+        self.data_mode = QComboBox(); self.data_mode.addItems(['processed', 'raw'])
+        self.attribute = QComboBox(); self.attribute.addItems(['Signed amplitude', 'Envelope amplitude', 'Absolute amplitude'])
+        self.attribute.setCurrentText('Signed amplitude')
+        self.velocity = QDoubleSpinBox(); self.velocity.setRange(0.02, 0.30); self.velocity.setValue(0.10); self.velocity.setSingleStep(0.005); self.velocity.setSuffix(' m/ns')
+        self.tmin = QDoubleSpinBox(); self.tmin.setRange(0, 5000); self.tmin.setValue(0.0); self.tmin.setSuffix(' ns')
+        self.tmax = QDoubleSpinBox(); self.tmax.setRange(1, 5000); self.tmax.setValue(180.0); self.tmax.setSuffix(' ns')
+        self.dt_out = QDoubleSpinBox(); self.dt_out.setRange(0.05, 20.0); self.dt_out.setValue(0.5); self.dt_out.setSingleStep(0.25); self.dt_out.setSuffix(' ns')
+        self.trace_step = QSpinBox(); self.trace_step.setRange(1, 100); self.trace_step.setValue(1)
+        self.k_filter = QComboBox(); self.k_filter.addItems(['Off', 'Light k-filter', 'Medium k-filter', 'Strong k-filter']); self.k_filter.setCurrentText('Off')
+        self.pad_t = QDoubleSpinBox(); self.pad_t.setRange(1.0, 4.0); self.pad_t.setValue(1.5); self.pad_t.setSingleStep(0.25)
+        self.pad_x = QDoubleSpinBox(); self.pad_x.setRange(1.0, 4.0); self.pad_x.setValue(1.5); self.pad_x.setSingleStep(0.25)
+        self.clip_pct = QDoubleSpinBox(); self.clip_pct.setRange(80.0, 100.0); self.clip_pct.setValue(98.5); self.clip_pct.setSingleStep(0.1); self.clip_pct.setSuffix(' %')
+        self.jacobian = QCheckBox('Stolt Jacobian'); self.jacobian.setChecked(True)
+        self.mute_top = QCheckBox('Mute before tmin, preserve t=0'); self.mute_top.setChecked(True)
+
+        entries = [
+            ('Line', self.line_combo), ('Data', self.data_mode), ('Attribute', self.attribute),
+            ('Velocity', self.velocity), ('Mute tmin', self.tmin), ('tmax', self.tmax),
+            ('Output dt', self.dt_out), ('Trace step', self.trace_step), ('k-filter', self.k_filter),
+            ('Pad time', self.pad_t), ('Pad distance', self.pad_x), ('Clip', self.clip_pct),
+        ]
+        for r, (lab, w) in enumerate(entries):
+            lbl = QLabel(lab); lbl.setMinimumWidth(78)
+            grid.addWidget(lbl, r, 0)
+            grid.addWidget(w, r, 1)
+        grid.addWidget(self.btn_refresh, len(entries), 0, 1, 2)
+        left_lay.addLayout(grid)
+        left_lay.addWidget(self.jacobian)
+        left_lay.addWidget(self.mute_top)
+
+        self.btn_run = QPushButton('Run 2-D migration')
+        self.btn_png = QPushButton('Export PNG')
+        self.btn_npz = QPushButton('Export NPZ')
+        for b in [self.btn_run, self.btn_png, self.btn_npz]:
+            left_lay.addWidget(b)
+        left_lay.addStretch(1)
+
+        scroll = QScrollArea(); scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setMinimumWidth(300); scroll.setMaximumWidth(390); scroll.setWidget(left)
+        splitter.addWidget(scroll)
+
+        right = QWidget()
+        right_lay = QVBoxLayout(right)
+        right_lay.setContentsMargins(0, 0, 0, 0)
+        self.preview_scroll = QScrollArea(); self.preview_scroll.setWidgetResizable(True)
+        self.image_label = QLabel('Run 2-D migration to display selected-line input and migrated depth section.')
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.image_label.setMinimumSize(700, 360)
+        self.preview_scroll.setWidget(self.image_label)
+        right_lay.addWidget(self.preview_scroll, stretch=1)
+        self.log = QTextEdit(); self.log.setReadOnly(True); self.log.setMaximumHeight(90)
+        right_lay.addWidget(self.log)
+        splitter.addWidget(right)
+        splitter.setStretchFactor(0, 0); splitter.setStretchFactor(1, 1)
+        try: splitter.setSizes([330, 1100])
+        except Exception: pass
+
+        self.btn_refresh.clicked.connect(self.refresh_lines)
+        self.btn_run.clicked.connect(self.run_pipeline)
+        self.btn_png.clicked.connect(self.export_png)
+        self.btn_npz.clicked.connect(self.export_npz)
+
+    def _status(self, txt):
+        from PyQt6.QtWidgets import QApplication
+        self.log.append(str(txt))
+        try:
+            target = getattr(getattr(self.owner, 'main', None), 'status', None) or getattr(getattr(self.owner, 'owner', None), 'status', None)
+            if target is not None:
+                target.setText(str(txt))
+        except Exception:
+            pass
+        QApplication.processEvents()
+
+    def _project_root(self):
+        if self.kind == 'schleitheim':
+            return Path('/home/luqman/gpr_gui/data/MALA')
+        return Path(getattr(getattr(self.owner, 'owner', None), 'root', '/home/luqman/gpr_gui/data/PulseEkko'))
+
+    def _available_lines(self):
+        if self.kind == 'schleitheim':
+            try: lines = list(self.owner.selected_lines_for_maps())
+            except Exception: lines = list(getattr(getattr(self.owner, 'main', None), 'lines', []))
+        else:
+            try: lines = list(self.owner.selected_lines())
+            except Exception: lines = list(getattr(getattr(self.owner, 'owner', None), 'lines', []))
+        def key(line):
+            try: parent = line.folder.parent.name.lower()
+            except Exception: parent = ''
+            rank = 0 if parent == 'inline' else 1 if parent == 'crossline' else 2
+            try: num = int(getattr(line, 'number', 999999))
+            except Exception: num = 999999
+            return (rank, num, str(getattr(line, 'name', '')))
+        return sorted(lines, key=key)
+
+    def refresh_lines(self):
+        old_name = None
+        try: old_name = getattr(self._current_line(), 'name', None)
+        except Exception: pass
+        self.lines = self._available_lines()
+        self.line_combo.blockSignals(True)
+        try:
+            self.line_combo.clear()
+            default_idx = 0
+            for i, line in enumerate(self.lines):
+                try: parent = line.folder.parent.name.lower()
+                except Exception: parent = ''
+                prefix = 'I' if parent == 'inline' else 'C' if parent == 'crossline' else 'L'
+                try: num = int(getattr(line, 'number', i+1))
+                except Exception: num = i + 1
+                label = f'{prefix}{num}: {getattr(line,"direction","").upper()}  {getattr(line,"name","")}'
+                self.line_combo.addItem(label, i)
+                if old_name and getattr(line, 'name', None) == old_name:
+                    default_idx = i
+                elif (not old_name and parent == 'inline' and num == 3):
+                    default_idx = i
+                elif (not old_name and default_idx == 0 and parent == 'inline' and num == 1):
+                    default_idx = i
+            if self.lines:
+                self.line_combo.setCurrentIndex(default_idx)
+        finally:
+            self.line_combo.blockSignals(False)
+        self._status(f'2-D migration line list: {len(self.lines)} line(s). Default is inline 1 when available.')
+
+    def _current_line(self):
+        if not self.lines:
+            # avoid recursive status/update loops; just refresh once
+            self.lines = self._available_lines()
+        if not self.lines:
+            raise RuntimeError('No selected/available line for 2-D migration.')
+        idx = self.line_combo.currentData()
+        try: idx = int(idx)
+        except Exception: idx = int(self.line_combo.currentIndex())
+        idx = max(0, min(idx, len(self.lines) - 1))
+        return self.lines[idx]
+
+    def _line_array_time_xy(self, line):
+        if self.kind == 'schleitheim':
+            old = None
+            try:
+                old = self.owner.mode.currentText()
+                self.owner.mode.setCurrentText(self.data_mode.currentText())
+            except Exception:
+                pass
+            try: arr = self.owner.ensure_data(line)
+            finally:
+                if old is not None:
+                    try: self.owner.mode.setCurrentText(old)
+                    except Exception: pass
+            t = self.owner.time_vector(line, arr.shape[1] if np.ndim(arr) == 2 else 0)
+            try: x, y, _z = self.owner.trace_xyz(line, arr.shape[0])
+            except Exception:
+                try: x, y = self.owner.trace_xy(line, arr.shape[0])
+                except Exception:
+                    x = np.arange(arr.shape[0], dtype=float); y = np.zeros(arr.shape[0], dtype=float)
+        else:
+            old = None
+            try:
+                old = self.owner.data_choice.currentText()
+                self.owner.data_choice.setCurrentText(self.data_mode.currentText())
+            except Exception:
+                pass
+            try: arr = self.owner.get_array(line)
+            finally:
+                if old is not None:
+                    try: self.owner.data_choice.setCurrentText(old)
+                    except Exception: pass
+            try: t = self.owner.owner.corrected_time_ns(line)
+            except Exception: t = getattr(line, 'time_ns', None)
+            x = np.asarray(getattr(line, 'x', np.arange(arr.shape[0])), dtype=float)
+            y = np.asarray(getattr(line, 'y', np.zeros(arr.shape[0])), dtype=float)
+
+        arr = np.asarray(arr, dtype=float)
+        t = np.asarray(t, dtype=float)
+        if arr.ndim != 2:
+            raise RuntimeError('Line data are not 2-D.')
+        # Desired convention for this code: arr[trace, sample]
+        if t.size == arr.shape[0] and t.size != arr.shape[1]:
+            arr = arr.T.copy()
+        if t.size != arr.shape[1]:
+            t = np.linspace(0.0, float(getattr(line, 'time_window_ns', arr.shape[1]-1) or arr.shape[1]-1), arr.shape[1])
+        ntr = arr.shape[0]
+        x = np.asarray(x, dtype=float); y = np.asarray(y, dtype=float)
+        if x.size != ntr and x.size >= 2:
+            x = np.interp(np.linspace(0, 1, ntr), np.linspace(0, 1, x.size), x)
+        elif x.size != ntr:
+            x = np.arange(ntr, dtype=float)
+        if y.size != ntr and y.size >= 2:
+            y = np.interp(np.linspace(0, 1, ntr), np.linspace(0, 1, y.size), y)
+        elif y.size != ntr:
+            y = np.zeros(ntr, dtype=float)
+        return arr, t, x, y
+
+    def _prepare_line_section(self, progress=None):
+        line = self._current_line()
+        if progress: progress(5, f'Reading selected line: {getattr(line,"name",line)}')
+        arr, t, x, y = self._line_array_time_xy(line)
+        step = max(1, int(self.trace_step.value()))
+        idx = np.arange(0, arr.shape[0], step, dtype=int)
+        arr = arr[idx, :]; x = x[idx]; y = y[idx]
+        dist = np.zeros(arr.shape[0], dtype=float)
+        if arr.shape[0] > 1:
+            dist[1:] = np.cumsum(np.sqrt(np.diff(x)**2 + np.diff(y)**2))
+        dd = np.diff(dist)
+        dx = float(np.nanmedian(dd)) if dd.size and np.any(np.isfinite(dd)) else 0.05
+        if not np.isfinite(dx) or dx <= 0: dx = 0.05
+        tmax = max(1.0, float(self.tmax.value()))
+        dt = max(0.05, float(self.dt_out.value()))
+        t_axis = np.arange(0.0, tmax + 0.5 * dt, dt, dtype=float)
+        if t_axis.size < 8:
+            raise RuntimeError('Time window too short for 2-D migration.')
+        if progress: progress(20, f'Resampling {arr.shape[0]} traces onto regular time axis...')
+        data = np.zeros((t_axis.size, arr.shape[0]), dtype=np.float32)
+        t_good = np.isfinite(t)
+        if np.count_nonzero(t_good) < 2: raise RuntimeError('Invalid time vector for selected line.')
+        tt = t[t_good]
+        order = np.argsort(tt)
+        tt = tt[order]
+        for j in range(arr.shape[0]):
+            tr = np.asarray(arr[j, :], dtype=float)[t_good][order]
+            data[:, j] = np.interp(t_axis, tt, tr, left=0.0, right=0.0).astype(np.float32)
+        if self.mute_top.isChecked():
+            data[t_axis < float(self.tmin.value()), :] = 0.0
+        attr = self.attribute.currentText().lower()
+        if attr.startswith('envelope'):
+            data_display = _gpr2d_envelope(data)
+        elif attr.startswith('absolute'):
+            data_display = np.abs(data).astype(np.float32)
+        else:
+            data_display = data.astype(np.float32)
+        data_proc = _gpr2d_k_filter(data_display, dx, self.k_filter.currentText())
+        return dict(line=line, input=data_display, proc=data_proc, t=t_axis, dist=dist, dx=dx, dt=dt)
+
+    def run_pipeline(self):
+        from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QApplication
+        dlg = QProgressDialog('Running 2-D Stolt migration...', 'Cancel', 0, 100, self)
+        dlg.setWindowTitle('2-D migration'); dlg.setMinimumDuration(0); dlg.setValue(0)
+        def progress(v, msg):
+            dlg.setValue(int(max(0, min(100, v))))
+            dlg.setLabelText(str(msg)); self._status(str(msg)); QApplication.processEvents()
+            if dlg.wasCanceled(): raise RuntimeError('2-D migration cancelled by user.')
+        try:
+            sec = self._prepare_line_section(progress)
+            vel = float(self.velocity.value())
+            progress(35, 'Running 2-D Stolt/f-k migration using the same remapping core...')
+            mig = _gpr2d_stolt_migration(
+                sec['proc'], dt=sec['dt'], dx=sec['dx'], velocity=vel,
+                apply_jacobian=self.jacobian.isChecked(), pad_t=float(self.pad_t.value()), pad_x=float(self.pad_x.value()),
+                taper_t=0.05, taper_x=0.05, progress_cb=lambda v, m: progress(35 + int(55*v/100), m)
+            )
+            dz = 0.5 * vel * sec['dt']
+            depth = np.arange(mig.shape[0], dtype=float) * dz
+            self.last = dict(**sec, migrated=mig, depth=depth, velocity=vel)
+            progress(95, 'Drawing 2-D migration comparison...')
+            self.plot_result()
+            progress(100, '2-D migration finished.')
+        except Exception as e:
+            self._status('2-D migration failed: ' + str(e))
+            QMessageBox.critical(self, '2-D migration failed', f'{e}\n\n{traceback.format_exc()}')
+        finally:
+            dlg.close()
+
+    def _clip(self, arr):
+        a = np.asarray(arr, dtype=float)
+        finite = np.isfinite(a)
+        if not np.any(finite): return 1.0
+        pct = float(self.clip_pct.value())
+        v = float(np.nanpercentile(np.abs(a[finite]), pct))
+        return max(v, 1e-9)
+
+    def plot_result(self):
+        if not self.last: return
+        from PyQt6.QtGui import QPixmap
+        from PyQt6.QtCore import Qt
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        import tempfile
+        r = self.last
+        fig = Figure(figsize=(14.5, 8.2), tight_layout=False)
+        FigureCanvasAgg(fig)
+        ax1 = fig.add_subplot(2, 1, 1)
+        ax2 = fig.add_subplot(2, 1, 2)
+        dist = r['dist']; t = r['t']; depth = r['depth']
+        extent_in = [float(dist[0]), float(dist[-1]), float(t[-1]), float(t[0])]
+        extent_mig = [float(dist[0]), float(dist[-1]), float(depth[-1]), float(depth[0])]
+        c1 = self._clip(r['input']); c2 = self._clip(r['migrated'])
+        im1 = ax1.imshow(r['input'], aspect='auto', cmap='seismic', vmin=-c1, vmax=c1, extent=extent_in)
+        im2 = ax2.imshow(r['migrated'], aspect='auto', cmap='seismic', vmin=-c2, vmax=c2, extent=extent_mig)
+        line = r['line']
+        try: parent = line.folder.parent.name.lower()
+        except Exception: parent = ''
+        prefix = 'I' if parent == 'inline' else 'C' if parent == 'crossline' else 'L'
+        name = f'{prefix}{getattr(line,"number","")}: {getattr(line,"direction","").upper()}  {getattr(line,"name","")}'
+        ax1.set_title(name + ' — input, muted before tmin')
+        ax1.set_xlabel('Distance along selected line [m]'); ax1.set_ylabel('TWT [ns]')
+        fig.colorbar(im1, ax=ax1, shrink=0.70, pad=0.015, label='Amplitude')
+        ax2.set_title(name + ' — 2-D Stolt migrated')
+        ax2.set_xlabel('Distance along selected line [m]'); ax2.set_ylabel('Depth [m]')
+        fig.colorbar(im2, ax=ax2, shrink=0.70, pad=0.015, label='Amplitude')
+        fig.suptitle(f'2-D selected-line Stolt/f-k migration | v={r["velocity"]:.3f} m/ns | dx={r["dx"]:.3f} m | not 3-D volume')
+        try: fig.tight_layout(rect=[0, 0, 1, 0.96])
+        except Exception: pass
+        out = Path(tempfile.gettempdir()) / f'gpr2d_migration_preview_{id(self)}.png'
+        fig.savefig(out, dpi=220, bbox_inches='tight')
+        self._last_png = out
+        pix = QPixmap(str(out))
+        vp = self.preview_scroll.viewport().size()
+        w = max(1200, vp.width() - 28)
+        if pix.width() > w:
+            pix = pix.scaledToWidth(w, Qt.TransformationMode.SmoothTransformation)
+        self.preview_scroll.setWidgetResizable(False)
+        self.preview_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.preview_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.image_label.setPixmap(pix)
+        self.image_label.setMinimumSize(pix.size())
+        self.image_label.adjustSize()
+        self._status(f'2-D migration result: line={name}; input={r["input"].shape}; migrated={r["migrated"].shape}; dx={r["dx"]:.3f} m.')
+
+    def _default_out(self, suffix):
+        root = self._project_root(); outdir = root / 'migration_exports'; outdir.mkdir(parents=True, exist_ok=True)
+        line = self.last['line'] if self.last else self._current_line()
+        line_name = str(getattr(line, 'name', 'selected_line')).replace('/', '_').replace(' ', '_')
+        name = 'schleitheim_mala' if self.kind == 'schleitheim' else 'bulach_pulseekko'
+        return outdir / f'{name}_2d_stolt_{line_name}_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}{suffix}'
+
+    def export_png(self):
+        from PyQt6.QtWidgets import QMessageBox
+        if not self.last:
+            QMessageBox.warning(self, 'No 2-D migration', 'Run 2-D migration first.'); return
+        if self._last_png is None or not Path(self._last_png).exists():
+            self.plot_result()
+        out = self._default_out('.png')
+        import shutil
+        shutil.copyfile(self._last_png, out)
+        self._status(f'Saved 2-D migration PNG: {out}')
+
+    def export_npz(self):
+        from PyQt6.QtWidgets import QMessageBox
+        if not self.last:
+            QMessageBox.warning(self, 'No 2-D migration', 'Run 2-D migration first.'); return
+        out = self._default_out('.npz')
+        r = self.last
+        np.savez_compressed(out, input=r['input'], processed_for_migration=r['proc'], migrated=r['migrated'], time_ns=r['t'], depth_m=r['depth'], distance_m=r['dist'], dx_m=r['dx'], velocity_m_ns=r['velocity'], line_name=str(getattr(r['line'], 'name', '')))
+        self._status(f'Saved 2-D migration NPZ: {out}')
+
+
+def _insert_2d_tab_next_to_3d(tabw, widget):
+    try:
+        idx = tabw.count()
+        for i in range(tabw.count()):
+            txt = tabw.tabText(i).lower().replace('-', '')
+            if '3d migration' in txt or '3 d migration' in txt:
+                idx = i
+                break
+        else:
+            for i in range(tabw.count()):
+                if 'selected fence' in tabw.tabText(i).lower():
+                    idx = i + 1; break
+        tabw.insertTab(idx, widget, '2D Migration')
+        return True
+    except Exception:
+        return False
+
+
+_GPR2D_SAFE_PREV_APPLY_SCHLEITHEIM = apply_schleitheim
+_GPR2D_SAFE_PREV_APPLY_BULACH = apply_bulach
+
+
+def apply_schleitheim(globs):
+    try: _GPR2D_SAFE_PREV_APPLY_SCHLEITHEIM(globs)
+    except Exception as e: print('Existing 3-D migration patch failed before 2-D tab insertion:', e)
+    cls = globs.get('GPR3DStandardAnalysisTab') or globs.get('GPR3DAnalysisTab')
+    if cls is None or getattr(cls, '_gpr2d_safe_stolt_patched', False): return
+    old_init = cls.__init__
+    def new_init(self, *args, **kwargs):
+        old_init(self, *args, **kwargs)
+        try:
+            if not hasattr(self, 'gpr2d_migration_tab'):
+                self.gpr2d_migration_tab = GPR2DMigrationTab(self, 'schleitheim')
+                _insert_2d_tab_next_to_3d(self.tabs, self.gpr2d_migration_tab)
+        except Exception as e:
+            print('Could not add Schleitheim 2-D Migration tab:', e)
+    cls.__init__ = new_init
+    cls._gpr2d_safe_stolt_patched = True
+    print('2-D Stolt migration tab active for Schleitheim/MALA.')
+
+
+def apply_bulach(globs):
+    try: _GPR2D_SAFE_PREV_APPLY_BULACH(globs)
+    except Exception as e: print('Existing 3-D migration patch failed before 2-D tab insertion:', e)
+    cls = globs.get('PulseEkko3DAnalysis')
+    if cls is None or getattr(cls, '_gpr2d_safe_stolt_patched', False): return
+    old_init = cls.__init__
+    def new_init(self, *args, **kwargs):
+        old_init(self, *args, **kwargs)
+        try:
+            if not hasattr(self, 'gpr2d_migration_tab'):
+                self.gpr2d_migration_tab = GPR2DMigrationTab(self, 'bulach')
+                _insert_2d_tab_next_to_3d(self.tabs, self.gpr2d_migration_tab)
+        except Exception as e:
+            print('Could not add Bulach 2-D Migration tab:', e)
+    cls.__init__ = new_init
+    cls._gpr2d_safe_stolt_patched = True
+    print('2-D Stolt migration tab active for Bulach/PulseEKKO.')
+# --- end 2-D Stolt migration tab patch v2 safe image ---
+
+
+# --- 2-D migration visual SEC/AGC display patch ---
+def _gpr2d_visual_sec_agc(a, z_or_t):
+    """Display-only SEC + AGC-style gain for seeing hyperbola collapse."""
+    import numpy as _np
+    a = _np.asarray(a, dtype=float).copy()
+    z = _np.asarray(z_or_t, dtype=float)
+    if a.ndim != 2 or z.size != a.shape[0]:
+        return a
+
+    finite = _np.isfinite(a)
+    if not _np.any(finite):
+        return a
+
+    # SEC/t-power style gain along time/depth axis.
+    zn = z - _np.nanmin(z)
+    denom = float(_np.nanmax(zn)) if _np.nanmax(zn) > 0 else 1.0
+    gain = (1.0 + 3.0 * zn / denom) ** 1.35
+    a *= gain[:, None]
+
+    # AGC-style running RMS equalisation along vertical axis.
+    try:
+        from scipy.ndimage import uniform_filter1d
+        win = max(7, int(round(a.shape[0] / 18)))
+        rms = _np.sqrt(uniform_filter1d(a * a, size=win, axis=0, mode='nearest'))
+        ref = float(_np.nanmedian(rms[_np.isfinite(rms) & (rms > 0)])) if _np.any(_np.isfinite(rms) & (rms > 0)) else 1.0
+        a = a / (rms + 0.15 * ref) * ref
+    except Exception:
+        pass
+
+    return a.astype(float)
+
+
+def _gpr2d_plot_result_visual_gain(self):
+    if not self.last:
+        return
+    from pathlib import Path as _Path
+    from PyQt6.QtGui import QPixmap
+    from PyQt6.QtCore import Qt
+    from matplotlib.figure import Figure
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    import tempfile
+    import numpy as _np
+
+    r = self.last
+    fig = Figure(figsize=(14.5, 8.2), tight_layout=False)
+    FigureCanvasAgg(fig)
+
+    ax1 = fig.add_subplot(2, 1, 1)
+    ax2 = fig.add_subplot(2, 1, 2)
+
+    dist = _np.asarray(r['dist'], dtype=float)
+    t = _np.asarray(r['t'], dtype=float)
+    depth = _np.asarray(r['depth'], dtype=float)
+
+    inp = _gpr2d_visual_sec_agc(r['input'], t)
+    mig = _gpr2d_visual_sec_agc(r['migrated'], depth)
+
+    extent_in = [float(dist[0]), float(dist[-1]), float(t[-1]), float(t[0])]
+    extent_mig = [float(dist[0]), float(dist[-1]), float(depth[-1]), float(depth[0])]
+
+    c1 = self._clip(inp)
+    c2 = self._clip(mig)
+
+    im1 = ax1.imshow(inp, aspect='auto', cmap='seismic', vmin=-c1, vmax=c1, extent=extent_in)
+    im2 = ax2.imshow(mig, aspect='auto', cmap='seismic', vmin=-c2, vmax=c2, extent=extent_mig)
+
+    line = r['line']
+    try:
+        parent = line.folder.parent.name.lower()
+    except Exception:
+        parent = ''
+    prefix = 'I' if parent == 'inline' else 'C' if parent == 'crossline' else 'L'
+    name = f'{prefix}{getattr(line,"number","")}: {getattr(line,"direction","").upper()}  {getattr(line,"name","")}'
+
+    ax1.set_title(name + ' — input, display SEC+AGC gain')
+    ax1.set_xlabel('Distance along selected line [m]')
+    ax1.set_ylabel('TWT [ns]')
+    fig.colorbar(im1, ax=ax1, shrink=0.74, pad=0.012, label='Display amplitude')
+
+    ax2.set_title(name + ' — 2-D Stolt migrated, display SEC+AGC gain')
+    ax2.set_xlabel('Distance along selected line [m]')
+    ax2.set_ylabel('Depth [m]')
+    fig.colorbar(im2, ax=ax2, shrink=0.74, pad=0.012, label='Display amplitude')
+
+    fig.suptitle(f'2-D selected-line Stolt/f-k migration | v={r["velocity"]:.3f} m/ns | dx={r["dx"]:.3f} m | display gain only')
+    try:
+        fig.tight_layout(rect=[0, 0, 1, 0.96])
+    except Exception:
+        pass
+
+    out = _Path(tempfile.gettempdir()) / f'gpr2d_migration_preview_{id(self)}.png'
+    fig.savefig(out, dpi=220, bbox_inches='tight')
+    self._last_png = out
+
+    pix = QPixmap(str(out))
+    vp = self.preview_scroll.viewport().size()
+    w = max(1200, vp.width() - 28)
+    if pix.width() > w:
+        pix = pix.scaledToWidth(w, Qt.TransformationMode.SmoothTransformation)
+
+    self.preview_scroll.setWidgetResizable(False)
+    self.preview_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    self.preview_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    self.image_label.setPixmap(pix)
+    self.image_label.setMinimumSize(pix.size())
+    self.image_label.adjustSize()
+
+    self._status(f'2-D migration result: line={name}; display uses SEC+AGC gain only; saved NPZ remains ungained.')
+
+try:
+    GPR2DMigrationTab.plot_result = _gpr2d_plot_result_visual_gain
+except Exception:
+    pass
+# --- end 2-D migration visual SEC/AGC display patch ---
+
+
+# --- 2-D migration view-in-window patch ---
+def _gpr2d_open_preview_window(self):
+    from pathlib import Path as _Path
+    from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QScrollArea
+    from PyQt6.QtGui import QPixmap
+    from PyQt6.QtCore import Qt
+
+    png = getattr(self, '_last_png', None)
+    if not png or not _Path(png).exists():
+        self._status('Run 2-D migration first; no preview image available yet.')
+        return
+
+    dlg = QDialog(self)
+    dlg.setWindowTitle('2-D Migration Preview')
+    dlg.resize(1300, 850)
+
+    lab = QLabel()
+    lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    lab.setPixmap(QPixmap(str(png)))
+    lab.adjustSize()
+
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(False)
+    scroll.setWidget(lab)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+    lay = QVBoxLayout(dlg)
+    lay.addWidget(scroll)
+
+    if not hasattr(self, '_preview_dialogs'):
+        self._preview_dialogs = []
+    self._preview_dialogs.append(dlg)
+    dlg.show()
+
+
+try:
+    if not hasattr(GPR2DMigrationTab, '_orig_init_view_window_patch'):
+        GPR2DMigrationTab._orig_init_view_window_patch = GPR2DMigrationTab.__init__
+
+    def _gpr2d_init_view_window_patch(self, *args, **kwargs):
+        GPR2DMigrationTab._orig_init_view_window_patch(self, *args, **kwargs)
+        from PyQt6.QtWidgets import QPushButton
+        for btn in self.findChildren(QPushButton):
+            if btn.text().strip().lower() == 'export png':
+                btn.setText('View in another window')
+                try:
+                    btn.clicked.disconnect()
+                except Exception:
+                    pass
+                btn.clicked.connect(lambda _=False, w=self: _gpr2d_open_preview_window(w))
+                break
+
+    GPR2DMigrationTab.__init__ = _gpr2d_init_view_window_patch
+except Exception:
+    pass
+# --- end 2-D migration view-in-window patch ---
+
+
+# --- 2-D migration best default settings patch ---
+def _gpr2d_apply_best_defaults(self):
+    import re
+    try:
+        self.tmin.setValue(60.0)       # mute shallow/direct wave; focus deeper hyperbola
+        self.tmax.setValue(180.0)
+        self.dt_out.setValue(0.5)      # finer migration sampling
+        self.trace_step.setValue(1)
+        self.pad_time.setValue(1.5)
+        self.pad_dist.setValue(1.5)
+        self.clip.setValue(98.5)
+        if hasattr(self, 'velocity'):
+            self.velocity.setValue(0.10)
+        if hasattr(self, 'k_filter'):
+            self.k_filter.setCurrentText('Off')
+        if hasattr(self, 'jacobian'):
+            self.jacobian.setChecked(True)
+        if hasattr(self, 'mute_before_tmin'):
+            self.mute_before_tmin.setChecked(True)
+    except Exception:
+        pass
+
+    # Prefer inline 3 because that is where the clear hyperbola is seen.
+    try:
+        combos = [c for c in self.findChildren(__import__('PyQt6.QtWidgets').QtWidgets.QComboBox) if c.count() > 5]
+        for cb in combos:
+            best = None
+            fallback = None
+            for i in range(cb.count()):
+                txt = cb.itemText(i).lower().replace(' ', '')
+                if re.search(r'\bi3:', txt) or '/line3_' in txt or '/line_3_' in txt or 'line3_ba' in txt or 'line_3_ba' in txt:
+                    best = i
+                    break
+                if fallback is None and (re.search(r'\bi1:', txt) or '/line1_' in txt or '/line_1_' in txt):
+                    fallback = i
+            if best is not None:
+                cb.setCurrentIndex(best)
+                break
+            elif fallback is not None:
+                cb.setCurrentIndex(fallback)
+    except Exception:
+        pass
+
+try:
+    if not hasattr(GPR2DMigrationTab, '_orig_init_best_defaults_patch'):
+        GPR2DMigrationTab._orig_init_best_defaults_patch = GPR2DMigrationTab.__init__
+
+    def _gpr2d_init_best_defaults_patch(self, *args, **kwargs):
+        GPR2DMigrationTab._orig_init_best_defaults_patch(self, *args, **kwargs)
+        _gpr2d_apply_best_defaults(self)
+
+    GPR2DMigrationTab.__init__ = _gpr2d_init_best_defaults_patch
+except Exception:
+    pass
+# --- end 2-D migration best default settings patch ---
+
+
+# --- 2-D velocity sweep patch ---
+def _gpr2d_robust_clip_for_plot(a, pct=98.5):
+    import numpy as _np
+    a = _np.asarray(a, dtype=float)
+    good = _np.isfinite(a)
+    if not _np.any(good):
+        return 1.0
+    return max(float(_np.nanpercentile(_np.abs(a[good]), float(pct))), 1e-9)
+
+
+def _gpr2d_display_gain_safe(a, axis):
+    try:
+        return _gpr2d_visual_sec_agc(a, axis)
+    except Exception:
+        return a
+
+
+def _gpr2d_line_label(self, line):
+    try:
+        parent = line.folder.parent.name.lower()
+    except Exception:
+        parent = ''
+    prefix = 'I' if parent == 'inline' else 'C' if parent == 'crossline' else 'L'
+    return f'{prefix}{getattr(line,"number","")}: {getattr(line,"direction","").upper()}  {getattr(line,"name","")}'
+
+
+def _gpr2d_run_velocity_sweep(self):
+    from PyQt6.QtWidgets import QProgressDialog, QMessageBox, QApplication
+    from PyQt6.QtGui import QPixmap
+    from PyQt6.QtCore import Qt
+    from matplotlib.figure import Figure
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    from pathlib import Path as _Path
+    import numpy as _np
+    import tempfile, traceback
+
+    velocities = [0.06, 0.08, 0.10, 0.12, 0.14]
+
+    dlg = QProgressDialog('Running 2-D velocity sweep...', 'Cancel', 0, 100, self)
+    dlg.setWindowTitle('2-D velocity sweep')
+    dlg.setMinimumDuration(0)
+    dlg.setValue(0)
+
+    def progress(v, msg):
+        dlg.setValue(int(max(0, min(100, v))))
+        dlg.setLabelText(str(msg))
+        self._status(str(msg))
+        QApplication.processEvents()
+        if dlg.wasCanceled():
+            raise RuntimeError('2-D velocity sweep cancelled by user.')
+
+    try:
+        # Good defaults for hyperbola-collapse check.
+        try:
+            self.tmin.setValue(60.0)
+            self.tmax.setValue(180.0)
+            self.dt_out.setValue(0.5)
+            self.trace_step.setValue(1)
+            self.k_filter.setCurrentText('Off')
+            self.clip_pct.setValue(98.5)
+            self.jacobian.setChecked(True)
+            self.mute_top.setChecked(True)
+        except Exception:
+            pass
+
+        sec = self._prepare_line_section(lambda v, m: progress(int(v * 0.2), m))
+        line = sec['line']
+        name = _gpr2d_line_label(self, line)
+        dist = _np.asarray(sec['dist'], dtype=float)
+        t = _np.asarray(sec['t'], dtype=float)
+
+        sweep = []
+        for i, vel in enumerate(velocities):
+            progress(20 + i * 14, f'Running 2-D Stolt migration at v={vel:.2f} m/ns...')
+            mig = _gpr2d_stolt_migration(
+                sec['proc'], dt=sec['dt'], dx=sec['dx'], velocity=vel,
+                apply_jacobian=self.jacobian.isChecked(),
+                pad_t=float(self.pad_t.value()),
+                pad_x=float(self.pad_x.value()),
+                taper_t=0.05,
+                taper_x=0.05,
+                progress_cb=None,
+            )
+            dz = 0.5 * vel * sec['dt']
+            depth = _np.arange(mig.shape[0], dtype=float) * dz
+            sweep.append((vel, mig, depth))
+
+        progress(92, 'Drawing velocity sweep comparison...')
+
+        rows = 1 + len(sweep)
+        fig = Figure(figsize=(14.5, 2.6 * rows), tight_layout=False)
+        FigureCanvasAgg(fig)
+
+        inp = _gpr2d_display_gain_safe(sec['input'], t)
+        cin = _gpr2d_robust_clip_for_plot(inp, self.clip_pct.value())
+        ax = fig.add_subplot(rows, 1, 1)
+        ax.imshow(inp, aspect='auto', cmap='seismic', vmin=-cin, vmax=cin,
+                  extent=[float(dist[0]), float(dist[-1]), float(t[-1]), float(t[0])])
+        ax.set_title(f'{name} — input, muted before {float(self.tmin.value()):.0f} ns, display gain')
+        ax.set_ylabel('TWT [ns]')
+        ax.set_xlabel('Distance [m]')
+
+        for r, (vel, mig, depth) in enumerate(sweep, start=2):
+            ax = fig.add_subplot(rows, 1, r)
+            show = _gpr2d_display_gain_safe(mig, depth)
+            c = _gpr2d_robust_clip_for_plot(show, self.clip_pct.value())
+            ax.imshow(show, aspect='auto', cmap='seismic', vmin=-c, vmax=c,
+                      extent=[float(dist[0]), float(dist[-1]), float(depth[-1]), float(depth[0])])
+            ax.set_title(f'2-D Stolt migrated velocity sweep: v={vel:.2f} m/ns')
+            ax.set_ylabel('Depth [m]')
+            ax.set_xlabel('Distance [m]')
+
+        fig.suptitle('2-D migration velocity sweep — choose velocity with tightest hyperbola collapse, least smile/frown artefact')
+        try:
+            fig.tight_layout(rect=[0, 0, 1, 0.97])
+        except Exception:
+            pass
+
+        out = _Path(tempfile.gettempdir()) / f'gpr2d_velocity_sweep_{id(self)}.png'
+        fig.savefig(out, dpi=220, bbox_inches='tight')
+        self._last_png = out
+        self.last_sweep = dict(section=sec, velocities=velocities, results=sweep, png=out)
+
+        pix = QPixmap(str(out))
+        vp = self.preview_scroll.viewport().size()
+        w = max(1200, vp.width() - 28)
+        if pix.width() > w:
+            pix = pix.scaledToWidth(w, Qt.TransformationMode.SmoothTransformation)
+
+        self.preview_scroll.setWidgetResizable(False)
+        self.preview_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.preview_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.image_label.setPixmap(pix)
+        self.image_label.setMinimumSize(pix.size())
+        self.image_label.adjustSize()
+
+        progress(100, '2-D velocity sweep finished.')
+        self._status('Velocity sweep finished: compare which velocity best collapses the hyperbola.')
+    except Exception as e:
+        self._status('2-D velocity sweep failed: ' + str(e))
+        QMessageBox.critical(self, '2-D velocity sweep failed', f'{e}\n\n{traceback.format_exc()}')
+    finally:
+        dlg.close()
+
+
+try:
+    if not hasattr(GPR2DMigrationTab, '_orig_init_velocity_sweep_patch'):
+        GPR2DMigrationTab._orig_init_velocity_sweep_patch = GPR2DMigrationTab.__init__
+
+    def _gpr2d_init_velocity_sweep_patch(self, *args, **kwargs):
+        GPR2DMigrationTab._orig_init_velocity_sweep_patch(self, *args, **kwargs)
+
+        from PyQt6.QtWidgets import QPushButton
+        import re
+
+        # Strong defaults for line-3 hyperbola testing.
+        try:
+            self.tmin.setValue(60.0)
+            self.tmax.setValue(180.0)
+            self.dt_out.setValue(0.5)
+            self.trace_step.setValue(1)
+            self.k_filter.setCurrentText('Off')
+            self.velocity.setValue(0.10)
+            self.clip_pct.setValue(98.5)
+        except Exception:
+            pass
+
+        # Prefer inline 3.
+        try:
+            for i in range(self.line_combo.count()):
+                txt = self.line_combo.itemText(i).lower().replace(' ', '')
+                if re.search(r'\bi3:', txt) or '/line3_' in txt or '/line_3_' in txt or 'line3_ba' in txt or 'line_3_ba' in txt:
+                    self.line_combo.setCurrentIndex(i)
+                    break
+        except Exception:
+            pass
+
+        if not hasattr(self, 'btn_velocity_sweep'):
+            self.btn_velocity_sweep = QPushButton('Velocity sweep')
+            try:
+                lay = self.btn_run.parentWidget().layout()
+                idx = lay.indexOf(self.btn_run)
+                lay.insertWidget(idx + 1, self.btn_velocity_sweep)
+            except Exception:
+                try:
+                    self.layout().addWidget(self.btn_velocity_sweep)
+                except Exception:
+                    pass
+            self.btn_velocity_sweep.clicked.connect(lambda _=False, w=self: _gpr2d_run_velocity_sweep(w))
+
+    GPR2DMigrationTab.__init__ = _gpr2d_init_velocity_sweep_patch
+except Exception:
+    pass
+# --- end 2-D velocity sweep patch ---
+
+
+# --- 2-D preview popup maximisable scroll fix ---
+def _gpr2d_open_preview_window(self):
+    from pathlib import Path as _Path
+    from PyQt6.QtWidgets import QMainWindow, QLabel, QScrollArea
+    from PyQt6.QtGui import QPixmap
+    from PyQt6.QtCore import Qt
+
+    png = getattr(self, '_last_png', None)
+    if not png or not _Path(png).exists():
+        self._status('Run 2-D migration or velocity sweep first; no preview image available yet.')
+        return
+
+    win = QMainWindow(self)
+    win.setWindowTitle('2-D Migration Preview')
+    win.setWindowFlags(
+        Qt.WindowType.Window
+        | Qt.WindowType.WindowMinimizeButtonHint
+        | Qt.WindowType.WindowMaximizeButtonHint
+        | Qt.WindowType.WindowCloseButtonHint
+    )
+
+    lab = QLabel()
+    lab.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+    pix = QPixmap(str(png))
+    lab.setPixmap(pix)
+    lab.setMinimumSize(pix.size())
+    lab.adjustSize()
+
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(False)
+    scroll.setWidget(lab)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+    win.setCentralWidget(scroll)
+    win.resize(1500, 950)
+    win.showMaximized()
+
+    if not hasattr(self, '_preview_windows'):
+        self._preview_windows = []
+    self._preview_windows.append(win)
+# --- end 2-D preview popup maximisable scroll fix ---
+
+
+# --- 2-D zoomable centred preview window patch ---
+def _gpr2d_open_preview_window(self):
+    from pathlib import Path as _Path
+    from PyQt6.QtWidgets import QMainWindow, QLabel, QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QPushButton
+    from PyQt6.QtGui import QPixmap
+    from PyQt6.QtCore import Qt, QTimer
+
+    png = getattr(self, '_last_png', None)
+    if not png or not _Path(png).exists():
+        self._status('Run 2-D migration or velocity sweep first; no preview image available yet.')
+        return
+
+    win = QMainWindow(self)
+    win.setWindowTitle('2-D Migration Preview')
+    win.setWindowFlags(
+        Qt.WindowType.Window
+        | Qt.WindowType.WindowMinimizeButtonHint
+        | Qt.WindowType.WindowMaximizeButtonHint
+        | Qt.WindowType.WindowCloseButtonHint
+    )
+
+    orig = QPixmap(str(png))
+    lab = QLabel()
+    lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    lab.setPixmap(orig)
+    lab.setMinimumSize(orig.size())
+    lab.adjustSize()
+
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(False)
+    scroll.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    scroll.setWidget(lab)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+    win._orig_pix = orig
+    win._scale = 1.0
+
+    def apply_scale():
+        w = max(1, int(win._orig_pix.width() * win._scale))
+        h = max(1, int(win._orig_pix.height() * win._scale))
+        pix = win._orig_pix.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        lab.setPixmap(pix)
+        lab.setMinimumSize(pix.size())
+        lab.adjustSize()
+
+    def zoom(factor):
+        win._scale = max(0.15, min(6.0, win._scale * factor))
+        apply_scale()
+
+    def fit_width():
+        vw = max(200, scroll.viewport().width() - 30)
+        win._scale = max(0.15, min(6.0, vw / max(1, win._orig_pix.width())))
+        apply_scale()
+
+    def fit_window():
+        vw = max(200, scroll.viewport().width() - 30)
+        vh = max(200, scroll.viewport().height() - 30)
+        win._scale = max(0.15, min(6.0, min(vw / max(1, win._orig_pix.width()), vh / max(1, win._orig_pix.height()))))
+        apply_scale()
+
+    def actual_size():
+        win._scale = 1.0
+        apply_scale()
+
+    def toggle_fullscreen():
+        if win.isFullScreen():
+            win.showMaximized()
+        else:
+            win.showFullScreen()
+        QTimer.singleShot(100, fit_width)
+
+    top = QWidget()
+    bar = QHBoxLayout(top)
+    bar.setContentsMargins(6, 4, 6, 4)
+
+    for text, fn in [
+        ('Fit width', fit_width),
+        ('Fit window', fit_window),
+        ('100%', actual_size),
+        ('Zoom -', lambda: zoom(0.8)),
+        ('Zoom +', lambda: zoom(1.25)),
+        ('Full screen', toggle_fullscreen),
+    ]:
+        b = QPushButton(text)
+        b.clicked.connect(fn)
+        bar.addWidget(b)
+
+    bar.addStretch(1)
+
+    central = QWidget()
+    lay = QVBoxLayout(central)
+    lay.setContentsMargins(0, 0, 0, 0)
+    lay.addWidget(top, stretch=0)
+    lay.addWidget(scroll, stretch=1)
+    win.setCentralWidget(central)
+
+    win.resize(1500, 950)
+    win.showMaximized()
+    QTimer.singleShot(150, fit_width)
+
+    if not hasattr(self, '_preview_windows'):
+        self._preview_windows = []
+    self._preview_windows.append(win)
+# --- end 2-D zoomable centred preview window patch ---
+
+
+# --- reference-style 3-D migration plot template patch ---
+def _g3d_reference_clip(a):
+    import numpy as _np
+    a = _np.asarray(a, dtype=float)
+    good = _np.isfinite(a)
+    if not _np.any(good):
+        return 1.0
+    # Reference-notebook style: robust standard-deviation display.
+    v = 3.0 * float(_np.nanstd(a[good]))
+    if not _np.isfinite(v) or v <= 0:
+        v = float(_np.nanpercentile(_np.abs(a[good]), 98.5))
+    return max(v, 1e-9)
+
+
+def _g3d_selected_indices_reference_style(self, r):
+    import numpy as _np
+    mig = _np.asarray(r["migrated"])
+    nz, nx, ny = mig.shape
+
+    ix = nx // 2
+    iy = ny // 2
+
+    try:
+        if hasattr(self, "inline_section_spin") and self.inline_section_spin.maximum() > 1:
+            ix = int(self.inline_section_spin.value()) - 1
+    except Exception:
+        pass
+
+    try:
+        if hasattr(self, "crossline_section_spin") and self.crossline_section_spin.maximum() > 1:
+            iy = int(self.crossline_section_spin.value()) - 1
+    except Exception:
+        pass
+
+    ix = max(0, min(ix, nx - 1))
+    iy = max(0, min(iy, ny - 1))
+    return ix, iy
+
+
+def _g3d_plot_reference_style_section_comparison(self):
+    import numpy as _np
+
+    if not getattr(self, "last", None):
+        return
+
+    r = self.last
+    fig = self.canvas.fig
+    fig.clear()
+
+    mig = _np.asarray(r["migrated"])
+    cube_in = r.get("cube_migration_input", r.get("cube_premig", r.get("cube_display", r.get("cube"))))
+    cube_in = _np.asarray(cube_in)
+
+    x = _np.asarray(r.get("x", _np.arange(mig.shape[1])), dtype=float)
+    y = _np.asarray(r.get("y", _np.arange(mig.shape[2])), dtype=float)
+    t = _np.asarray(r.get("t", _np.arange(cube_in.shape[0])), dtype=float)
+    depth = _np.asarray(r.get("depth", _np.arange(mig.shape[0])), dtype=float)
+
+    ix, iy = _g3d_selected_indices_reference_style(self, r)
+
+    ax = [
+        fig.add_subplot(221),
+        fig.add_subplot(222),
+        fig.add_subplot(223),
+        fig.add_subplot(224),
+    ]
+
+    panels = [
+        (ax[0], cube_in[:, ix, :], y, t,     "Across-survey position [m]", "TWT [ns]",   f"Across-survey vertical section at X={ix+1} — input"),
+        (ax[1], mig[:, ix, :],     y, depth, "Across-survey position [m]", "Depth [m]", f"Across-survey vertical section at X={ix+1} — migrated"),
+        (ax[2], cube_in[:, :, iy], x, t,     "Along-survey position [m]",  "TWT [ns]",   f"Along-survey vertical section at Y={iy+1} — input"),
+        (ax[3], mig[:, :, iy],     x, depth, "Along-survey position [m]",  "Depth [m]", f"Along-survey vertical section at Y={iy+1} — migrated"),
+    ]
+
+    # Keep input/migrated panels paired with the same visual scale style.
+    clim_inline = _g3d_reference_clip(cube_in[:, ix, :])
+    clim_cross = _g3d_reference_clip(cube_in[:, :, iy])
+    clims = [clim_inline, clim_inline, clim_cross, clim_cross]
+
+    for i, (a, data2d, lateral, vertical, xlabel, ylabel, title) in enumerate(panels):
+        data2d = _np.asarray(data2d, dtype=float)
+        im = a.imshow(
+            data2d,
+            aspect="auto",
+            cmap="gray",
+            origin="upper",
+            extent=[float(lateral[0]), float(lateral[-1]), float(vertical[-1]), float(vertical[0])],
+            vmin=-clims[i],
+            vmax=clims[i],
+        )
+        a.set_title(title, fontsize=10)
+        a.set_xlabel(xlabel)
+        a.set_ylabel(ylabel)
+        fig.colorbar(im, ax=a, shrink=0.75, label="Amplitude")
+
+    fig.suptitle(
+        "3-D Stolt migration — before/after sections | "
+        f"v={float(r.get('velocity', 0)):.3f} m/ns | "
+        f"dx={float(r.get('dx', 0)):.3f}, dy={float(r.get('dy', 0)):.3f} m",
+        fontsize=12,
+    )
+
+    try:
+        fig.tight_layout(rect=[0, 0, 1, 0.94])
+    except Exception:
+        pass
+
+    self.canvas.draw()
+
+    try:
+        self._status(
+            f"3-D migration section plot: across-survey slice X={ix+1}/{mig.shape[1]}, "
+            f"crossline #{iy+1}/{mig.shape[2]}."
+        )
+    except Exception:
+        pass
+
+
+try:
+    if not hasattr(GPR3DMigrationTab, "_orig_plot_result_reference_style_patch"):
+        GPR3DMigrationTab._orig_plot_result_reference_style_patch = GPR3DMigrationTab.plot_result
+
+    def _g3d_plot_result_reference_style_patch(self, *args, **kwargs):
+        mode = ""
+        try:
+            mode = self.view_mode.currentText()
+        except Exception:
+            pass
+
+        if mode in ("", "Section comparison"):
+            return _g3d_plot_reference_style_section_comparison(self)
+
+        return GPR3DMigrationTab._orig_plot_result_reference_style_patch(self, *args, **kwargs)
+
+    GPR3DMigrationTab.plot_result = _g3d_plot_result_reference_style_patch
+except Exception:
+    pass
+# --- end reference-style 3-D migration plot template patch ---
+
+
+# --- 3-D migration colourmap option patch ---
+def _g3d_add_section_colourmap_control(self):
+    if hasattr(self, "section_cmap"):
+        return
+
+    try:
+        from PyQt6.QtWidgets import QWidget, QHBoxLayout, QLabel, QComboBox, QPushButton
+    except Exception:
+        return
+
+    self.section_cmap = QComboBox()
+    self.section_cmap.addItems(["Blue-red polarity", "Grey amplitude"])
+    self.section_cmap.setCurrentText("Blue-red polarity")
+    self.section_cmap.setToolTip("Display colour map only; migration result is unchanged.")
+
+    row = QWidget()
+    lay = QHBoxLayout(row)
+    lay.setContentsMargins(0, 0, 0, 0)
+    lab = QLabel("Colour map")
+    lab.setMinimumWidth(95)
+    lay.addWidget(lab)
+    lay.addWidget(self.section_cmap, stretch=1)
+
+    try:
+        run_btn = None
+        for b in self.findChildren(QPushButton):
+            if "Run 3-D" in b.text():
+                run_btn = b
+                break
+        if run_btn is not None and run_btn.parentWidget() is not None and run_btn.parentWidget().layout() is not None:
+            parent_lay = run_btn.parentWidget().layout()
+            idx = parent_lay.indexOf(run_btn)
+            parent_lay.insertWidget(max(0, idx), row)
+        else:
+            self.layout().addWidget(row)
+    except Exception:
+        pass
+
+    try:
+        self.section_cmap.currentTextChanged.connect(lambda *_: self.plot_result() if getattr(self, "last", None) else None)
+    except Exception:
+        pass
+
+
+def _g3d_section_cmap(self):
+    try:
+        txt = self.section_cmap.currentText().lower()
+        if "grey" in txt or "gray" in txt:
+            return "gray"
+    except Exception:
+        pass
+    return "seismic"
+
+
+def _g3d_plot_reference_style_section_comparison(self):
+    import numpy as _np
+
+    if not getattr(self, "last", None):
+        return
+
+    _g3d_add_section_colourmap_control(self)
+
+    r = self.last
+    fig = self.canvas.fig
+    fig.clear()
+
+    mig = _np.asarray(r["migrated"])
+    cube_in = r.get("cube_migration_input", r.get("cube_premig", r.get("cube_display", r.get("cube"))))
+    cube_in = _np.asarray(cube_in)
+
+    x = _np.asarray(r.get("x", _np.arange(mig.shape[1])), dtype=float)
+    y = _np.asarray(r.get("y", _np.arange(mig.shape[2])), dtype=float)
+    t = _np.asarray(r.get("t", _np.arange(cube_in.shape[0])), dtype=float)
+    depth = _np.asarray(r.get("depth", _np.arange(mig.shape[0])), dtype=float)
+
+    ix, iy = _g3d_selected_indices_reference_style(self, r)
+
+    ax = [
+        fig.add_subplot(221),
+        fig.add_subplot(222),
+        fig.add_subplot(223),
+        fig.add_subplot(224),
+    ]
+
+    panels = [
+        (ax[0], cube_in[:, ix, :], y, t,     "Across-survey position [m]", "TWT [ns]",   f"Across-survey vertical section at X={ix+1} — input"),
+        (ax[1], mig[:, ix, :],     y, depth, "Across-survey position [m]", "Depth [m]", f"Across-survey vertical section at X={ix+1} — migrated"),
+        (ax[2], cube_in[:, :, iy], x, t,     "Along-survey position [m]",  "TWT [ns]",   f"Along-survey vertical section at Y={iy+1} — input"),
+        (ax[3], mig[:, :, iy],     x, depth, "Along-survey position [m]",  "Depth [m]", f"Along-survey vertical section at Y={iy+1} — migrated"),
+    ]
+
+    clim_inline = _g3d_reference_clip(cube_in[:, ix, :])
+    clim_cross = _g3d_reference_clip(cube_in[:, :, iy])
+    clims = [clim_inline, clim_inline, clim_cross, clim_cross]
+    cmap = _g3d_section_cmap(self)
+
+    for i, (a, data2d, lateral, vertical, xlabel, ylabel, title) in enumerate(panels):
+        data2d = _np.asarray(data2d, dtype=float)
+        im = a.imshow(
+            data2d,
+            aspect="auto",
+            cmap=cmap,
+            origin="upper",
+            extent=[float(lateral[0]), float(lateral[-1]), float(vertical[-1]), float(vertical[0])],
+            vmin=-clims[i],
+            vmax=clims[i],
+        )
+        a.set_title(title, fontsize=10)
+        a.set_xlabel(xlabel)
+        a.set_ylabel(ylabel)
+        fig.colorbar(im, ax=a, shrink=0.75, label="Amplitude")
+
+    fig.suptitle(
+        "3-D Stolt migration — before/after sections | "
+        f"v={float(r.get('velocity', 0)):.3f} m/ns | "
+        f"dx={float(r.get('dx', 0)):.3f}, dy={float(r.get('dy', 0)):.3f} m",
+        fontsize=12,
+    )
+
+    try:
+        fig.tight_layout(rect=[0, 0, 1, 0.94])
+    except Exception:
+        pass
+
+    self.canvas.draw()
+
+    try:
+        self._status(
+            f"3-D migration section plot: across-survey slice X={ix+1}/{mig.shape[1]}, "
+            f"along-survey slice Y={iy+1}/{mig.shape[2]}, colour map={self.section_cmap.currentText()}."
+        )
+    except Exception:
+        pass
+
+
+try:
+    if not hasattr(GPR3DMigrationTab, "_orig_init_cmap_option_patch"):
+        GPR3DMigrationTab._orig_init_cmap_option_patch = GPR3DMigrationTab.__init__
+
+    def _g3d_init_cmap_option_patch(self, *args, **kwargs):
+        GPR3DMigrationTab._orig_init_cmap_option_patch(self, *args, **kwargs)
+        _g3d_add_section_colourmap_control(self)
+
+    GPR3DMigrationTab.__init__ = _g3d_init_cmap_option_patch
+except Exception:
+    pass
+# --- end 3-D migration colourmap option patch ---
+
+
+# --- force-enable 3-D section selectors after migration patch ---
+def _g3d_force_enable_section_selectors(self):
+    import numpy as _np
+    r = getattr(self, "last", None)
+    if not r:
+        return
+
+    if not getattr(self, "_g3d_section_selector_controls_added", False):
+        try:
+            _g3d_add_section_selector_controls(self)
+        except Exception:
+            return
+
+    mig = _np.asarray(r.get("migrated"))
+    if mig.ndim != 3:
+        return
+
+    nz, nx, ny = mig.shape
+    depth = _np.asarray(r.get("depth", []), dtype=float)
+
+    def enable_pair(spin, slider, n):
+        n = max(1, int(n))
+        cur = int(spin.value()) if spin.maximum() >= 1 and int(spin.value()) >= 1 else (n // 2 + 1)
+        cur = max(1, min(cur, n))
+
+        spin.blockSignals(True)
+        slider.blockSignals(True)
+        try:
+            spin.setEnabled(True)
+            slider.setEnabled(True)
+            try:
+                spin.setSpecialValueText("")
+            except Exception:
+                pass
+            spin.setRange(1, n)
+            spin.setSuffix(f" / {n}")
+            spin.setValue(cur)
+            slider.setRange(1, n)
+            slider.setValue(cur)
+        finally:
+            spin.blockSignals(False)
+            slider.blockSignals(False)
+
+    try:
+        enable_pair(self.inline_section_spin, self.inline_section_slider, nx)
+        enable_pair(self.crossline_section_spin, self.crossline_section_slider, ny)
+    except Exception:
+        pass
+
+    try:
+        if depth.size:
+            self.depth_index_slider.setEnabled(True)
+            self.depth_index_slider.setRange(0, max(0, depth.size - 1))
+            iz = int(self.depth_index_slider.value())
+            iz = max(0, min(iz, depth.size - 1))
+            self.depth_index_slider.setValue(iz)
+            self.depth_index_label.setText(f"z={float(depth[iz]):.2f} m")
+            self.depth_slice.setEnabled(True)
+            self.depth_slice.setRange(float(_np.nanmin(depth)), float(_np.nanmax(depth)))
+    except Exception:
+        pass
+
+
+try:
+    if not hasattr(GPR3DMigrationTab, "_orig_plot_result_enable_selectors_patch"):
+        GPR3DMigrationTab._orig_plot_result_enable_selectors_patch = GPR3DMigrationTab.plot_result
+
+    def _g3d_plot_result_enable_selectors_patch(self, *args, **kwargs):
+        _g3d_force_enable_section_selectors(self)
+        out = GPR3DMigrationTab._orig_plot_result_enable_selectors_patch(self, *args, **kwargs)
+        _g3d_force_enable_section_selectors(self)
+        return out
+
+    GPR3DMigrationTab.plot_result = _g3d_plot_result_enable_selectors_patch
+except Exception:
+    pass
+# --- end force-enable 3-D section selectors after migration patch ---
+
+
+# --- Bulach parallel-line 3-D migration labelling patch ---
+# Bulach/PulseEKKO is a dense parallel-line survey, not a crossed inline+crossline survey.
+# Keep the 3-D migration tab, but label it as parallel-line/pseudo-3-D and warn that the
+# across-line direction is gridded/interpolated from parallel profiles.
+
+_BULACH_PARALLEL_3D_PREV_APPLY = globals().get('apply_bulach')
+
+def _bulach_parallel3d_rename_tabs(self):
+    try:
+        tabs = getattr(self, 'tabs', None)
+        if tabs is None:
+            return
+        for i in range(tabs.count()):
+            txt = tabs.tabText(i).strip().lower().replace('-', '').replace(' ', '')
+            if txt in ('3dmigration', '3dmigrationtab') or tabs.tabText(i).strip() == '3D Migration':
+                tabs.setTabText(i, 'Parallel-line 3D Migration')
+                try:
+                    tabs.setTabToolTip(i, 'Pseudo/parallel-line 3-D migration: across-line direction is reconstructed from parallel profiles, not measured perpendicular crosslines.')
+                except Exception:
+                    pass
+                break
+    except Exception:
+        pass
+
+
+def _bulach_parallel3d_add_warning_to_widget(self):
+    try:
+        w = getattr(self, 'gpr3d_migration_tab', None)
+        if w is not None and getattr(w, 'kind', '') == 'bulach':
+            w._bulach_parallel_line_warning = True
+            try:
+                w._status('Bulach parallel-line 3-D migration: across-line direction is gridded/interpolated from parallel inline profiles; use 2-D migration for measured single-line QC.')
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+
+def apply_bulach(globs):
+    if _BULACH_PARALLEL_3D_PREV_APPLY:
+        _BULACH_PARALLEL_3D_PREV_APPLY(globs)
+
+    cls = globs.get('PulseEkko3DAnalysis')
+    if cls is not None and not getattr(cls, '_bulach_parallel3d_label_patch_installed', False):
+        old_init = cls.__init__
+        def new_init(self, *args, _old=old_init, **kwargs):
+            _old(self, *args, **kwargs)
+            _bulach_parallel3d_rename_tabs(self)
+            _bulach_parallel3d_add_warning_to_widget(self)
+        cls.__init__ = new_init
+        cls._bulach_parallel3d_label_patch_installed = True
+
+
+try:
+    if not hasattr(GPR3DMigrationTab, '_orig_plot_result_bulach_parallel3d_label_patch'):
+        GPR3DMigrationTab._orig_plot_result_bulach_parallel3d_label_patch = GPR3DMigrationTab.plot_result
+
+    def _plot_result_bulach_parallel3d_label_patch(self, *args, **kwargs):
+        out = GPR3DMigrationTab._orig_plot_result_bulach_parallel3d_label_patch(self, *args, **kwargs)
+        try:
+            if getattr(self, 'kind', '') == 'bulach':
+                fig = self.canvas.fig
+                r = getattr(self, 'last', None) or {}
+                vel = float(r.get('velocity', self.velocity.value() if hasattr(self, 'velocity') else 0.0))
+                dx = float(r.get('dx', self.grid_dx.value() if hasattr(self, 'grid_dx') else 0.0))
+                dy = float(r.get('dy', self.grid_dy.value() if hasattr(self, 'grid_dy') else 0.0))
+                if getattr(fig, '_suptitle', None) is not None:
+                    fig._suptitle.set_text(
+                        f'Parallel-line 3-D Stolt migration — before/after sections | v={vel:.3f} m/ns | dx={dx:.3f}, dy={dy:.3f} m'
+                    )
+                else:
+                    fig.suptitle(
+                        f'Parallel-line 3-D Stolt migration — before/after sections | v={vel:.3f} m/ns | dx={dx:.3f}, dy={dy:.3f} m',
+                        fontsize=12,
+                    )
+                pass  # removed Bulach footer text
+                self.canvas.draw_idle()
+                try:
+                    self._status('Bulach parallel-line 3-D migration displayed. Treat across-line sections as interpolated, not independently measured crosslines.')
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return out
+
+    GPR3DMigrationTab.plot_result = _plot_result_bulach_parallel3d_label_patch
+except Exception:
+    pass
+# --- end Bulach parallel-line 3-D migration labelling patch ---
+
+
+# --- Bulach parallel-line 3-D time/depth window fix ---
+def _g3d_is_bulach_parallel(self):
+    k = str(getattr(self, "kind", "")).lower()
+    return not ("schleitheim" in k or "mala" in k)
+
+def _g3d_apply_bulach_parallel_defaults(self):
+    if not _g3d_is_bulach_parallel(self):
+        return
+    try:
+        self.tmin.setValue(0.0)
+        self.tmax.setValue(50.0)
+        self.depth_slice.setValue(1.0)
+        self.trace_step.setValue(1)
+        self.max_lines.setValue(161)
+        self.k_filter.setCurrentText("Off")
+        self.blank_topo.setChecked(False)
+    except Exception:
+        pass
+
+def _g3d_crop_bulach_parallel_display(self):
+    if not _g3d_is_bulach_parallel(self):
+        return
+    r = getattr(self, "last", None)
+    if not r:
+        return
+    try:
+        tmax = min(float(self.tmax.value()), 50.0)
+        vel = float(r.get("velocity", self.velocity.value()))
+        zmax = max(0.5, 0.5 * vel * tmax)
+        for ax in list(self.canvas.fig.axes):
+            ylabel = ax.get_ylabel().lower()
+            if "twt" in ylabel or "time" in ylabel:
+                ax.set_ylim(tmax, 0.0)
+            elif "depth" in ylabel:
+                ax.set_ylim(zmax, 0.0)
+        self.canvas.draw_idle()
+    except Exception:
+        pass
+
+try:
+    if not hasattr(GPR3DMigrationTab, "_orig_init_bulach_window_fix"):
+        GPR3DMigrationTab._orig_init_bulach_window_fix = GPR3DMigrationTab.__init__
+
+    def _g3d_init_bulach_window_fix(self, *args, **kwargs):
+        GPR3DMigrationTab._orig_init_bulach_window_fix(self, *args, **kwargs)
+        _g3d_apply_bulach_parallel_defaults(self)
+
+    GPR3DMigrationTab.__init__ = _g3d_init_bulach_window_fix
+except Exception:
+    pass
+
+try:
+    if not hasattr(GPR3DMigrationTab, "_orig_run_pipeline_bulach_window_fix"):
+        GPR3DMigrationTab._orig_run_pipeline_bulach_window_fix = GPR3DMigrationTab.run_pipeline
+
+    def _g3d_run_pipeline_bulach_window_fix(self, *args, **kwargs):
+        _g3d_apply_bulach_parallel_defaults(self)
+        out = GPR3DMigrationTab._orig_run_pipeline_bulach_window_fix(self)
+        _g3d_crop_bulach_parallel_display(self)
+        return out
+
+    GPR3DMigrationTab.run_pipeline = _g3d_run_pipeline_bulach_window_fix
+except Exception:
+    pass
+
+try:
+    if not hasattr(GPR3DMigrationTab, "_orig_plot_result_bulach_window_fix"):
+        GPR3DMigrationTab._orig_plot_result_bulach_window_fix = GPR3DMigrationTab.plot_result
+
+    def _g3d_plot_result_bulach_window_fix(self, *args, **kwargs):
+        out = GPR3DMigrationTab._orig_plot_result_bulach_window_fix(self)
+        _g3d_crop_bulach_parallel_display(self)
+        return out
+
+    GPR3DMigrationTab.plot_result = _g3d_plot_result_bulach_window_fix
+except Exception:
+    pass
+# --- end Bulach parallel-line 3-D time/depth window fix ---
 
