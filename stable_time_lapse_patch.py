@@ -306,11 +306,6 @@ def _sch_draw_frame(self, fig, time_ns, idx=0, n=1, loop_no=0, extent=None, vlim
     else:
         ax.text(0.5, 0.5, f"Not enough points at {float(time_ns):.1f} ns", transform=ax.transAxes, ha="center", va="center")
 
-    try:
-        self.add_abcd_2d(ax)
-    except Exception:
-        pass
-
     scale_text = "whole-dataset scale" if _scale_mode(self) == "dataset" else "current-slice scale"
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
